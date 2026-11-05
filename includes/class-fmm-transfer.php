@@ -430,7 +430,7 @@ class FMM_Transfer {
 			return null;
 		}
 
-		if ( mb_strlen( $name ) > FMM_Taxonomy::MAX_NAME_LENGTH ) {
+		if ( FMM_Taxonomy::length( $name ) > FMM_Taxonomy::MAX_NAME_LENGTH ) {
 			/* translators: %d: maximum number of characters. */
 			self::add_error( $state, $where, sprintf( __( 'Must not be longer than %d characters.', 'fena-media-manager' ), FMM_Taxonomy::MAX_NAME_LENGTH ) );
 			return null;

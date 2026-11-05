@@ -625,6 +625,28 @@ class FMM_Taxonomy {
 	}
 
 	/**
+	 * Number of characters (not bytes) of a UTF-8 string.
+	 *
+	 * Uses mb_strlen() when the mbstring extension is loaded. Without it the
+	 * characters are counted with a UTF-8 regular expression; invalid UTF-8
+	 * falls back to the byte length.
+	 *
+	 * @param mixed $text Text.
+	 * @return int
+	 */
+	public static function length( $text ) {
+		$text = (string) $text;
+
+		if ( function_exists( 'mb_strlen' ) ) {
+			return mb_strlen( $text, 'UTF-8' );
+		}
+
+		$count = preg_match_all( '/./us', $text );
+
+		return false === $count ? strlen( $text ) : $count;
+	}
+
+	/**
 	 * Whether a value is a non-empty string of ASCII digits (like ctype_digit() for strings, without the ctype extension).
 	 *
 	 * @param mixed $value Value.
@@ -779,7 +801,7 @@ class FMM_Taxonomy {
 	 * @return true|WP_Error
 	 */
 	public static function validate_name( $name ) {
-		if ( '' === $name || mb_strlen( $name ) > self::MAX_NAME_LENGTH ) {
+		if ( '' === $name || self::length( $name ) > self::MAX_NAME_LENGTH ) {
 			return new WP_Error(
 				'fmm_invalid_name',
 				sprintf(

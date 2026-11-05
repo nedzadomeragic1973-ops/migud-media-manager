@@ -1326,6 +1326,13 @@ label[for="fmm-attachment-folder-filter"] {
 
 select#fmm-attachment-folder-filter {
 	grid-area: 2 / 2 / 3 / 3;
+	min-width: 0;
+	max-width: 100%;
+}
+
+/* Long folder names must not widen the columns (core uses 1fr, which grows with the option text). */
+.media-toolbar-secondary:has(#fmm-attachment-folder-filter) {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .media-toolbar-secondary:has(#media-attachment-filters):has(#fmm-attachment-folder-filter) {
@@ -1338,6 +1345,63 @@ select#media-attachment-filters ~ label[for="fmm-attachment-folder-filter"] {
 
 select#media-attachment-filters ~ select#fmm-attachment-folder-filter {
 	grid-area: 2 / 3 / 3 / 4;
+}
+
+/* With three filters, labels stay on one line, so the filter rows keep the height core reserves for them. */
+.media-toolbar-secondary:has(#media-attachment-filters):has(#fmm-attachment-folder-filter) label {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/*
+ * Three filters (type, date, folder) are too narrow for one row here: the folder
+ * filter gets its own row and the toolbar (48px + 12px padding, list at 72px)
+ * grows by it: 18px label + 32px select.
+ */
+@media only screen and (min-width: 901px) and (max-width: 1100px) {
+
+	.media-toolbar-secondary:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-rows: repeat(4, auto);
+		align-content: start;
+	}
+
+	select#media-attachment-filters ~ label[for="fmm-attachment-folder-filter"] {
+		grid-area: 3 / 1 / 4 / 2;
+	}
+
+	select#media-attachment-filters ~ select#fmm-attachment-folder-filter {
+		grid-area: 4 / 1 / 5 / 2;
+	}
+
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .media-toolbar {
+		height: calc(48px + 50px);
+	}
+
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .attachments,
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .attachments-wrapper,
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .uploader-inline {
+		top: calc(72px + 50px);
+	}
+}
+
+/*
+ * Up to 900px core stacks the filters and sizes the toolbar for two of them
+ * (height 117px, list at 131px). A third filter (type, date, folder) adds one
+ * row: 18px label + 40px select.
+ */
+@media only screen and (max-width: 900px) {
+
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .media-toolbar {
+		height: calc(117px + 58px);
+	}
+
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .attachments,
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .attachments-wrapper,
+	.attachments-browser:has(#media-attachment-filters):has(#media-attachment-date-filters):has(#fmm-attachment-folder-filter) .uploader-inline {
+		top: calc(131px + 58px);
+	}
 }
 
 @media screen and (max-width: 782px) {
