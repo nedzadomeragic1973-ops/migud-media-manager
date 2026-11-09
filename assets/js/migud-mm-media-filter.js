@@ -1,16 +1,16 @@
 /**
- * Fena Media Manager: shared folder store and the folder filter of the media modal.
+ * MIGUD Media Manager: shared folder store and the folder filter of the media modal.
  *
  * This file is the only place that extends core Backbone media views. Every
  * extension point is feature-detected; when core changes, the filter simply
  * does not appear and all server-side features keep working.
  *
- * Filter values of the `fmm_folder` query prop:
+ * Filter values of the `migud_mm_folder` query prop:
  *   null       All media (prop is not sent to the server)
  *   'none'     Media without folder
  *   '<id>'     Media in the folder with this term ID (always a string)
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 ( function( $, _, Backbone, wp, settings ) {
@@ -23,7 +23,7 @@
 	}
 
 	var __ = wp.i18n.__;
-	var PROP = 'fmm_folder';
+	var PROP = 'migud_mm_folder';
 
 	/**
 	 * Folder list and counts shared by the modal filter and the sidebar.
@@ -36,6 +36,7 @@
 		treeExpanded: !! settings.treeExpanded,
 		restoreLast: !! settings.restoreLast,
 		storageKey: settings.storageKey || '',
+		legacyKey: settings.legacyKey || '',
 		canManage: !! settings.canManage,
 
 		set: function( summary ) {
@@ -145,7 +146,7 @@
 		 * @return {Promise} Resolves with the summary.
 		 */
 		setSort: function( mode ) {
-			return wp.apiFetch( { path: '/fmm/v1/preferences', method: 'POST', data: { sort: mode } } ).then( function( summary ) {
+			return wp.apiFetch( { path: '/migud-mm/v1/preferences', method: 'POST', data: { sort: mode } } ).then( function( summary ) {
 				store.set( summary );
 				return summary;
 			} );
@@ -159,14 +160,14 @@
 		 * @return {Promise} Resolves with the summary.
 		 */
 		reorder: function( parentId, ids ) {
-			return wp.apiFetch( { path: '/fmm/v1/folders/order', method: 'POST', data: { parent: Number( parentId ) || 0, ids: _.map( ids, Number ) } } ).then( function( summary ) {
+			return wp.apiFetch( { path: '/migud-mm/v1/folders/order', method: 'POST', data: { parent: Number( parentId ) || 0, ids: _.map( ids, Number ) } } ).then( function( summary ) {
 				store.set( summary );
 				return summary;
 			} );
 		},
 
 		refresh: function() {
-			return wp.apiFetch( { path: '/fmm/v1/summary' } ).then( function( summary ) {
+			return wp.apiFetch( { path: '/migud-mm/v1/summary' } ).then( function( summary ) {
 				store.set( summary );
 				return summary;
 			} );
@@ -181,7 +182,7 @@
 	// Counts change when folders are edited in the attachment details, when
 	// media is deleted and after uploads.
 	if ( media.model && media.model.Attachments && media.model.Attachments.all ) {
-		store.listenTo( media.model.Attachments.all, 'change:fmmFolders destroy', store.refreshSoon );
+		store.listenTo( media.model.Attachments.all, 'change:migudMMFolders destroy', store.refreshSoon );
 	}
 	if ( wp.Uploader && wp.Uploader.queue ) {
 		store.listenTo( wp.Uploader.queue, 'reset', store.refreshSoon );
@@ -202,8 +203,8 @@
 	 * Folder dropdown. Options are built with .text() (folder names are user input).
 	 */
 	var FolderFilter = media.view.AttachmentFilters.extend( {
-		id: 'fmm-attachment-folder-filter',
-		className: 'attachment-filters fmm-folder-filter',
+		id: 'migud-mm-attachment-folder-filter',
+		className: 'attachment-filters migud-mm-folder-filter',
 
 		initialize: function() {
 			this.listenTo( this.model, 'change', this.select );
@@ -213,15 +214,15 @@
 
 		createFilters: function() {
 			var filters = {
-				all: { text: __( 'All folders', 'fena-media-manager' ), props: { fmm_folder: null }, priority: 10 },
-				none: { text: countLabel( __( 'Unassigned', 'fena-media-manager' ), store.unassigned ), props: { fmm_folder: 'none' }, priority: 20 }
+				all: { text: __( 'All folders', 'migud-media-manager' ), props: { migud_mm_folder: null }, priority: 10 },
+				none: { text: countLabel( __( 'Unassigned', 'migud-media-manager' ), store.unassigned ), props: { migud_mm_folder: 'none' }, priority: 20 }
 			};
 
 			_.each( store.tree(), function( node, index ) {
 				var folder = node.folder;
 				filters[ 'folder-' + folder.id ] = {
 					text: new Array( node.depth + 1 ).join( '— ' ) + countLabel( folder.name, folder.count ),
-					props: { fmm_folder: String( folder.id ) },
+					props: { migud_mm_folder: String( folder.id ) },
 					priority: 30 + index
 				};
 			} );
@@ -252,7 +253,7 @@
 	/**
 	 * Whether an attachment belongs to a folder filter value. Uploads in
 	 * progress use the folder they are being uploaded to (stamped by the
-	 * uploader binding below); finished ones their saved `fmmFolders`.
+	 * uploader binding below); finished ones their saved `migudMMFolders`.
 	 *
 	 * @param {wp.media.model.Attachment} attachment Attachment.
 	 * @param {string}                    value      'none' or folder ID.
@@ -260,16 +261,16 @@
 	 */
 	function inFolder( attachment, value ) {
 		var file = attachment.get( 'file' );
-		var target = attachment.fmmUploadFolder;
+		var target = attachment.migudMMUploadFolder;
 		var folders;
 
 		if ( attachment.get( 'uploading' ) ) {
 			if ( undefined === target ) {
-				target = ( file && file.fmmFolder ) || '';
+				target = ( file && file.migudMMFolder ) || '';
 			}
 			folders = target && 'none' !== target ? [ target ] : [];
 		} else {
-			folders = _.map( attachment.get( 'fmmFolders' ) || [], String );
+			folders = _.map( attachment.get( 'migudMMFolders' ) || [], String );
 		}
 
 		return 'none' === value ? ! folders.length : _.contains( folders, value );
@@ -316,7 +317,7 @@
 			value = String( value );
 			canValidate = _.isEmpty( _.difference( _.keys( this.args ), observable ) );
 
-			this.filters.fmmFolder = function( attachment ) {
+			this.filters.migudMMFolder = function( attachment ) {
 				return inFolder( attachment, value );
 			};
 
@@ -324,7 +325,7 @@
 				this.observe( wp.Uploader.queue );
 			}
 
-			this.listenTo( media.model.Attachments.all, 'change:fmmFolders', function( attachment ) {
+			this.listenTo( media.model.Attachments.all, 'change:migudMMFolders', function( attachment ) {
 				if ( canValidate ) {
 					this.validate( attachment );
 				} else if ( this.get( attachment.cid ) && ! inFolder( attachment, value ) ) {
@@ -362,29 +363,29 @@
 	function bindUploader( view ) {
 		var up = view && view.uploader && view.uploader.uploader;
 
-		if ( ! up || ! up.bind || up.fmmBound ) {
+		if ( ! up || ! up.bind || up.migudMMBound ) {
 			return;
 		}
-		up.fmmBound = true;
+		up.migudMMBound = true;
 
 		up.bind( 'FilesAdded', function( uploader, files ) {
 			var folder = uploadFolder( view.controller );
 			_.each( files, function( file ) {
-				file.fmmFolder = folder;
+				file.migudMMFolder = folder;
 			} );
 		}, null, 100 );
 
 		up.bind( 'FilesAdded', function( uploader, files ) {
 			_.each( files, function( file ) {
 				if ( file.attachment ) {
-					file.attachment.fmmUploadFolder = file.fmmFolder || '';
+					file.attachment.migudMMUploadFolder = file.migudMMFolder || '';
 				}
 			} );
 		} );
 
 		up.bind( 'BeforeUpload', function( uploader, file ) {
-			if ( file.fmmFolder ) {
-				uploader.settings.multipart_params[ PROP ] = file.fmmFolder;
+			if ( file.migudMMFolder ) {
+				uploader.settings.multipart_params[ PROP ] = file.migudMMFolder;
 			} else {
 				delete uploader.settings.multipart_params[ PROP ];
 			}
@@ -417,23 +418,23 @@
 			return;
 		}
 
-		this.toolbar.set( 'fmmFolderFilterLabel', new media.view.Label( {
-			value: __( 'Filter by folder', 'fena-media-manager' ),
-			attributes: { 'for': 'fmm-attachment-folder-filter' },
+		this.toolbar.set( 'migudMMFolderFilterLabel', new media.view.Label( {
+			value: __( 'Filter by folder', 'migud-media-manager' ),
+			attributes: { 'for': 'migud-mm-attachment-folder-filter' },
 			priority: -70
 		} ).render() );
 
-		this.toolbar.set( 'fmmFolderFilter', new FolderFilter( {
+		this.toolbar.set( 'migudMMFolderFilter', new FolderFilter( {
 			controller: this.controller,
 			model: props,
 			priority: -70
 		} ).render() );
 	};
 
-	window.fmmMedia = {
+	window.migudMMMedia = {
 		store: store,
 		prop: PROP,
 		FolderFilter: FolderFilter,
 		bindUploader: bindUploader
 	};
-}( jQuery, _, Backbone, window.wp, window.fmmMediaSettings ) );
+}( jQuery, _, Backbone, window.wp, window.migudMMMediaSettings ) );

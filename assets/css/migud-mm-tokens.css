@@ -1,0 +1,85 @@
+/**
+ * MIGUD Media Manager: design tokens. Every token is scoped to the .migud-mm root
+ * class, independent of the admin color scheme and of any theme.
+ *
+ * @package MIGUD_Media_Manager
+ */
+
+.migud-mm {
+
+	/* Surfaces */
+	--migud-mm-surface: #fff;
+	--migud-mm-surface-subtle: #f8fafc;
+	--migud-mm-surface-muted: #f1f5f9;
+
+	/* Borders */
+	--migud-mm-border: #e2e8f0;
+	--migud-mm-border-strong: #cbd5e1;
+	--migud-mm-border-input: #8392a8; /* form field borders: 3.16:1 on white, 3.02:1 on --migud-mm-surface-subtle */
+
+	/* Text */
+	--migud-mm-text: #0f172a;
+	--migud-mm-text-body: #1e293b;
+	--migud-mm-text-muted: #5b6b80;
+
+	/* Primary (dark buttons) */
+	--migud-mm-primary: #1e293b;
+	--migud-mm-primary-hover: #334155;
+	--migud-mm-on-primary: #fff;
+
+	/* Accent (selected and active state, focus) */
+	--migud-mm-accent: #6d4fd8;
+	--migud-mm-accent-soft: #f5f3ff;
+	--migud-mm-accent-border: #ddd6fe;
+
+	/* Focus */
+	--migud-mm-focus: var(--migud-mm-accent);
+	--migud-mm-focus-width: 2px;
+
+	/* Status */
+	--migud-mm-danger: #b91c1c;
+	--migud-mm-danger-soft: #fef2f2;
+	--migud-mm-danger-border: #fecaca;
+	--migud-mm-success: #047857;
+	--migud-mm-success-soft: #ecfdf5;
+	--migud-mm-warning: #b45309;
+	--migud-mm-warning-soft: #fffbeb;
+
+	/* Radius */
+	--migud-mm-radius-container: 16px;
+	--migud-mm-radius-card: 12px;
+	--migud-mm-radius-control: 8px;
+	--migud-mm-radius-small: 6px;
+	--migud-mm-radius-pill: 999px;
+
+	/* Shadow */
+	--migud-mm-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+	--migud-mm-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+	--migud-mm-shadow-popover: 0 8px 24px rgba(15, 23, 42, 0.12);
+	--migud-mm-shadow-dialog: 0 25px 50px rgba(15, 23, 42, 0.25);
+
+	/* Motion */
+	--migud-mm-transition: 0.15s ease;
+
+	/* Folder colors (stored by name; values must not change) */
+	--migud-mm-color-gray: #787c82;
+	--migud-mm-color-blue: #4a72b0;
+	--migud-mm-color-violet: #7b61c9;
+	--migud-mm-color-sand: #a07e45;
+	--migud-mm-color-green: #5b8a66;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.migud-mm {
+		--migud-mm-transition: 0s;
+	}
+}
+
+@media (forced-colors: active) {
+
+	.migud-mm .migud-mm-sidebar__item.is-active {
+		outline: 1px solid CanvasText;
+		outline-offset: -1px;
+	}
+}

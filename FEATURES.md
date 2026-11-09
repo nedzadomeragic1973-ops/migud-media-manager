@@ -1,12 +1,12 @@
-# Fena Media Manager 1.0.0 – Features
+# MIGUD Media Manager 1.0.0 – Features
 
-Fena Media Manager adds virtual folders to the native WordPress media library.
+MIGUD Media Manager adds virtual folders to the native WordPress media library.
 This document lists the features that are implemented in version 1.0.0.
 
 ## Core principles
 
 - **Virtual folders only.** Folders are a private, hierarchical attachment
-  taxonomy (`fmm_folder`). Files, URLs, attachment IDs and attachment
+  taxonomy (`migud_mm_folder`). Files, URLs, attachment IDs and attachment
   metadata are never changed or moved on disk.
 - **No custom database tables.** Folders are terms, folder settings are term
   meta, preferences are user meta and plugin options.
@@ -32,7 +32,7 @@ This document lists the features that are implemented in version 1.0.0.
   the folder under a new name.
 - On first activation six default folders are created (Hero Images, Hero
   Slider, Blog Images, Backgrounds, Logos & Icons, Videos), only if no folders
-  exist yet. The list can be changed with the `fmm_default_folders` filter.
+  exist yet. The list can be changed with the `migud_mm_default_folders` filter.
 
 ## Media assignment
 
@@ -185,7 +185,7 @@ browser shortcuts are not affected.
 
 ## Settings
 
-Media → Fena Media Manager (administrators):
+Media → MIGUD Media Manager (administrators):
 
 - Default sort order for users without their own choice.
 - Folder tree on load: collapsed or expanded.
@@ -200,11 +200,11 @@ Media → Fena Media Manager (administrators):
 - Managing folders (create, rename, move, delete, reorder, appearance, lock)
   requires the `edit_others_posts` capability by default (Editors and
   Administrators). It can be changed with the
-  `fmm_manage_folders_capability` filter.
+  `migud_mm_manage_folders_capability` filter.
 - Assigning media requires `upload_files` and permission to edit each
   attachment; this is checked on the server for every file.
 - The settings page requires `manage_options`.
-- All REST routes (`fmm/v1`) check permissions and nonces; input is
+- All REST routes (`migud-mm/v1`, former `fmm/v1`) check permissions and nonces; input is
   sanitized and output escaped.
 
 ## Accessibility and responsive design
@@ -223,11 +223,24 @@ Media → Fena Media Manager (administrators):
 
 ## Developer notes
 
-- Taxonomy `fmm_folder`; term meta `fmm_order`, `fmm_color`, `fmm_icon`,
-  `fmm_locked`.
-- REST namespace `fmm/v1`; query var `fmm_folder`.
-- Filters: `fmm_default_folders`, `fmm_manage_folders_capability`,
-  `fmm_donate_url`.
+- Taxonomy `migud_mm_folder`; term meta `migud_mm_order`, `migud_mm_color`,
+  `migud_mm_icon`, `migud_mm_locked`; user meta `migud_mm_folder_sort`;
+  options `migud_mm_settings`, `migud_mm_defaults_seeded`.
+- REST namespace `migud-mm/v1`; query var and upload parameter `migud_mm_folder`.
+- Scripts and styles: `assets/js/migud-mm-*.js`, `assets/css/migud-mm-*.css` (handles
+  `migud-mm-*`), JS globals `migudMMMedia`, `migudMMPicker`, `migudMMMediaSettings`,
+  attachment JSON key `migudMMFolders`, CSS scope `.migud-mm`, classes/ids `migud-mm-*`,
+  custom properties `--migud-mm-*`, sprite symbols `migud-mm-i-*` / `migud-mm-g-*`.
+  The last selected folder is stored in `migud-mm-last-folder-<site>-<user>`; a value
+  stored under the former key `fmm-last-folder-*` is taken over once.
+- Filters: `migud_mm_default_folders`, `migud_mm_manage_folders_capability`,
+  `migud_mm_donate_url`.
+- Transition from Fena Media Manager: the former REST namespace `fmm/v1`
+  (former error codes), query var/upload parameter `fmm_folder`, admin-post
+  actions, form fields, settings page slug and the deprecated `fmm_*` filters
+  are still accepted (`Migud_MM_Legacy`). Until the stored `fmm_*` data has
+  been migrated (`Migud_MM_Migration`), the plugin pauses its folder features
+  and writes nothing (`Migud_MM_Maintenance`).
 - Requires WordPress 6.4 and PHP 7.4 or later.
 
 ## Known limitations and ideas for later versions
@@ -243,7 +256,7 @@ Not part of 1.0.0; noted from the release check.
 
 ## Feature summary (readme.txt draft)
 
-Fena Media Manager brings clean, virtual folders to the WordPress media
+MIGUD Media Manager brings clean, virtual folders to the WordPress media
 library – without moving a single file.
 
 * Folders and unlimited subfolders in a fast, full-height sidebar

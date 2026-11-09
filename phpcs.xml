@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="Fena Media Manager">
-	<description>WordPress Coding Standards for the Fena Media Manager plugin.</description>
+<ruleset name="MIGUD Media Manager">
+	<description>WordPress Coding Standards for the MIGUD Media Manager plugin.</description>
 
 	<file>.</file>
 
@@ -21,7 +21,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="fena-media-manager"/>
+				<element value="migud-media-manager"/>
 			</property>
 		</properties>
 	</rule>
@@ -29,8 +29,8 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="fmm_"/>
-				<element value="FMM_"/>
+				<element value="migud_mm_"/>
+				<element value="MIGUD_MM_"/>
 			</property>
 		</properties>
 	</rule>

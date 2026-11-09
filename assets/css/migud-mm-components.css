@@ -1,0 +1,346 @@
+/**
+ * MIGUD Media Manager: shared UI components of the grid and the settings page:
+ * the select-only combobox (migud-mm-picker.js) and the notice card.
+ *
+ * @package MIGUD_Media_Manager
+ */
+
+.migud-mm .migud-mm-picker .migud-mm-icon {
+	display: block;
+	flex: none;
+	color: inherit;
+}
+
+.migud-mm .migud-mm-picker .migud-mm-icon use {
+	pointer-events: none;
+}
+
+.migud-mm-picker {
+	position: relative;
+}
+
+.migud-mm .migud-mm-picker .migud-mm-picker__button {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	width: 100%;
+	height: 34px;
+	margin: 0;
+	padding: 0 10px;
+	color: var(--migud-mm-text);
+	font-size: 13px;
+	line-height: 1.4;
+	text-align: start;
+	background: var(--migud-mm-surface);
+	border: 1px solid var(--migud-mm-border-input);
+	border-radius: var(--migud-mm-radius-control);
+	cursor: pointer;
+}
+
+.migud-mm-picker .migud-mm-picker__button:hover {
+	border-color: var(--migud-mm-text-muted);
+}
+
+.migud-mm-picker .migud-mm-picker__button:focus {
+	outline: 0;
+}
+
+.migud-mm-picker .migud-mm-picker__button:focus-visible,
+.migud-mm-picker.is-open .migud-mm-picker__button {
+	border-color: var(--migud-mm-accent);
+	outline: 2px solid transparent;
+	box-shadow: 0 0 0 1px var(--migud-mm-accent);
+}
+
+.migud-mm-picker .migud-mm-picker__label,
+.migud-mm-picker .migud-mm-picker__name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.migud-mm-picker .migud-mm-picker__button > .migud-mm-icon {
+	width: 16px;
+	height: 16px;
+	color: var(--migud-mm-text-muted);
+}
+
+.migud-mm-picker .migud-mm-picker__icon {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+}
+
+.migud-mm-picker .migud-mm-picker__icon .migud-mm-icon.migud-mm-folder__glyph {
+	width: 16px;
+	height: 16px;
+	color: var(--migud-mm-text-muted);
+}
+
+.migud-mm-picker .migud-mm-picker__icon[data-migud-mm-color="blue"] {
+	--migud-mm-folder-color: var(--migud-mm-color-blue);
+}
+
+.migud-mm-picker .migud-mm-picker__icon[data-migud-mm-color="violet"] {
+	--migud-mm-folder-color: var(--migud-mm-color-violet);
+}
+
+.migud-mm-picker .migud-mm-picker__icon[data-migud-mm-color="sand"] {
+	--migud-mm-folder-color: var(--migud-mm-color-sand);
+}
+
+.migud-mm-picker .migud-mm-picker__icon[data-migud-mm-color="green"] {
+	--migud-mm-folder-color: var(--migud-mm-color-green);
+}
+
+.migud-mm-picker .migud-mm-picker__icon .migud-mm-icon {
+	width: 16px;
+	height: 16px;
+	color: var(--migud-mm-folder-color, var(--migud-mm-color-gray));
+}
+
+.migud-mm-picker .migud-mm-picker__icon--plain .migud-mm-icon {
+	color: var(--migud-mm-text-muted);
+}
+
+.migud-mm-picker .migud-mm-picker__list {
+	position: absolute;
+	top: calc(100% + 6px);
+	inset-inline: 0;
+	z-index: 10;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 4px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	list-style: none;
+	background: var(--migud-mm-surface);
+	border: 1px solid var(--migud-mm-border);
+	border-radius: var(--migud-mm-radius-card);
+	box-shadow: var(--migud-mm-shadow-popover);
+}
+
+.migud-mm-picker.is-up .migud-mm-picker__list {
+	top: auto;
+	bottom: calc(100% + 6px);
+}
+
+.migud-mm-picker .migud-mm-picker__list[hidden] {
+	display: none;
+}
+
+.migud-mm-picker .migud-mm-picker__option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	min-height: 32px;
+	margin: 0;
+	padding-block: 0;
+	padding-inline-end: 10px;
+	color: var(--migud-mm-text-body);
+	font-size: 13px;
+	line-height: 1.3;
+	border-inline-start: 2px solid transparent;
+	border-radius: var(--migud-mm-radius-small);
+	cursor: pointer;
+}
+
+.migud-mm-picker .migud-mm-picker__option:hover {
+	background: var(--migud-mm-surface-subtle);
+}
+
+.migud-mm-picker .migud-mm-picker__option.is-active {
+	background: var(--migud-mm-accent-soft);
+	border-inline-start-color: var(--migud-mm-accent);
+}
+
+.migud-mm-picker .migud-mm-picker__option[aria-selected="true"] {
+	color: var(--migud-mm-text);
+	font-weight: 500;
+}
+
+.migud-mm-picker .migud-mm-picker__option > .migud-mm-icon {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	color: var(--migud-mm-accent);
+	visibility: hidden;
+}
+
+.migud-mm-picker .migud-mm-picker__option[aria-selected="true"] > .migud-mm-icon {
+	visibility: visible;
+}
+
+.migud-mm .migud-mm-picker .migud-mm-picker__icon[hidden] {
+	display: none;
+}
+
+@media screen and (max-width: 782px) {
+
+	.migud-mm .migud-mm-picker .migud-mm-picker__button {
+		height: 40px;
+		min-height: 40px;
+	}
+
+	.migud-mm .migud-mm-picker .migud-mm-picker__option {
+		min-height: 40px;
+	}
+}
+
+@media (forced-colors: active) {
+
+	.migud-mm .migud-mm-picker .migud-mm-picker__option.is-active {
+		outline: 1px solid Highlight;
+		outline-offset: -1px;
+	}
+}
+
+/* Notice card (sidebar and settings page) */
+.migud-mm .migud-mm-notice-ui.notice {
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 10px;
+	box-sizing: border-box;
+	margin: 12px 16px 0;
+	padding: 10px 8px 10px 12px;
+	padding-inline: 12px 8px;
+	background: var(--migud-mm-surface);
+	border: 1px solid var(--migud-mm-border);
+	border-radius: var(--migud-mm-radius-card);
+	box-shadow: var(--migud-mm-shadow-sm);
+}
+
+.migud-mm .migud-mm-notice-ui.notice[hidden] {
+	display: none;
+}
+
+.migud-mm .migud-mm-notice-ui.notice-error {
+	border-color: var(--migud-mm-danger-border);
+}
+
+.migud-mm .migud-mm-notice-ui__icon {
+	display: flex;
+	flex: none;
+	margin-top: 1px;
+}
+
+.migud-mm .migud-mm-notice-ui__icon .migud-mm-icon {
+	width: 18px;
+	height: 18px;
+}
+
+/* Success badge (also used by the finished upload panel): light gray square, anthracite check */
+.migud-mm .migud-mm-notice-ui.notice-success .migud-mm-notice-ui__icon,
+.migud-mm-upload[data-state="done"] .migud-mm-upload__status-icon {
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 24px;
+	height: 24px;
+	margin-top: -2px;
+	color: var(--migud-mm-text-body);
+	background: var(--migud-mm-surface-muted);
+	border: 1px solid var(--migud-mm-border);
+	border-radius: var(--migud-mm-radius-control);
+}
+
+.migud-mm .migud-mm-notice-ui.notice-success .migud-mm-notice-ui__icon .migud-mm-icon,
+.migud-mm-upload[data-state="done"] .migud-mm-upload__status-icon .migud-mm-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.migud-mm .migud-mm-notice-ui.notice-warning .migud-mm-notice-ui__icon {
+	color: var(--migud-mm-warning);
+}
+
+.migud-mm .migud-mm-notice-ui.notice-error .migud-mm-notice-ui__icon {
+	color: var(--migud-mm-danger);
+}
+
+.migud-mm .migud-mm-notice-ui.notice p {
+	flex: 1 1 0%; /* Long texts wrap inside the row instead of pushing the text and the close button to new lines. */
+	min-width: 0;
+	margin: 0;
+	padding: 1px 0 0;
+	color: var(--migud-mm-text-body);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss {
+	position: static;
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 28px;
+	height: 28px;
+	margin: -3px 0 -3px auto;
+	padding: 0;
+	color: var(--migud-mm-text-muted);
+	background: transparent;
+	border: 0;
+	border-radius: var(--migud-mm-radius-small);
+	cursor: pointer;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss::before {
+	display: none;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss .migud-mm-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss:hover {
+	color: var(--migud-mm-text);
+	background: rgba(15, 23, 42, 0.06);
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss:focus {
+	outline: 0;
+	box-shadow: none;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss:focus-visible {
+	outline: var(--migud-mm-focus-width) solid var(--migud-mm-focus);
+	outline-offset: 0;
+}
+
+.migud-mm .migud-mm-notice-ui .migud-mm-icon {
+	display: block;
+	flex: none;
+	color: inherit;
+}
+
+.migud-mm .migud-mm-notice-ui.notice p {
+	order: 1;
+}
+
+.migud-mm .migud-mm-notice-ui .notice-dismiss {
+	order: 2;
+}
+
+.migud-mm .migud-mm-notice-ui.notice ul {
+	order: 3;
+	flex: 0 0 100%;
+	margin: 6px 0 0;
+}
+
+@media screen and (max-width: 782px) {
+
+	.migud-mm .migud-mm-notice-ui .notice-dismiss {
+		width: 32px;
+		height: 32px;
+	}
+}

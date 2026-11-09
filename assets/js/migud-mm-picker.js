@@ -1,8 +1,8 @@
 /**
- * Fena Media Manager: dropdown following the WAI-ARIA "select-only combobox"
+ * MIGUD Media Manager: dropdown following the WAI-ARIA "select-only combobox"
  * pattern. Used by the move dialog of the folder sidebar and the settings page.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 ( function( $, _, wp ) {
@@ -34,7 +34,7 @@
 	}
 
 	function iconEl( name ) {
-		return svgEl( 'fmm-icon fmm-icon--' + name, 'fmm-i-' + ICON_IDS[ name ] );
+		return svgEl( 'migud-mm-icon migud-mm-icon--' + name, 'migud-mm-i-' + ICON_IDS[ name ] );
 	}
 
 	// Folder icon, plus the glyph of the folder icon next to it when it has one.
@@ -42,7 +42,7 @@
 		var els = [ iconEl( 'folder' ) ];
 
 		if ( _.contains( FOLDER_ICONS, key ) ) {
-			els.push( svgEl( 'fmm-icon fmm-folder__glyph', 'fmm-g-' + key ) );
+			els.push( svgEl( 'migud-mm-icon migud-mm-folder__glyph', 'migud-mm-g-' + key ) );
 		}
 
 		return els;
@@ -88,21 +88,21 @@
 		var typed = '';
 		var typedTimer = 0;
 		var isOpen = false;
-		var $wrap = $( '<div class="fmm-picker"></div>' );
-		var $button = $( '<button type="button" class="fmm-picker__button" role="combobox" aria-haspopup="listbox" aria-expanded="false"></button>' )
+		var $wrap = $( '<div class="migud-mm-picker"></div>' );
+		var $button = $( '<button type="button" class="migud-mm-picker__button" role="combobox" aria-haspopup="listbox" aria-expanded="false"></button>' )
 			.attr( { id: config.id, 'aria-controls': config.listId, 'aria-labelledby': config.labelId + ' ' + config.id } );
-		var $buttonIcon = $( '<span class="fmm-picker__icon" aria-hidden="true"></span>' );
-		var $buttonLabel = $( '<span class="fmm-picker__label"></span>' );
-		var $list = $( '<ul class="fmm-picker__list" role="listbox" tabindex="-1" hidden></ul>' ).attr( { id: config.listId, 'aria-labelledby': config.labelId } );
+		var $buttonIcon = $( '<span class="migud-mm-picker__icon" aria-hidden="true"></span>' );
+		var $buttonLabel = $( '<span class="migud-mm-picker__label"></span>' );
+		var $list = $( '<ul class="migud-mm-picker__list" role="listbox" tabindex="-1" hidden></ul>' ).attr( { id: config.listId, 'aria-labelledby': config.labelId } );
 		var $items = [];
 
 		function markColor( $el, color ) {
-			$el.attr( 'data-fmm-color', null );
-			$el[ 0 ].style.removeProperty( '--fmm-folder-color' );
+			$el.attr( 'data-migud-mm-color', null );
+			$el[ 0 ].style.removeProperty( '--migud-mm-folder-color' );
 			if ( _.contains( COLOR_PRESETS, color ) ) {
-				$el.attr( 'data-fmm-color', color );
+				$el.attr( 'data-migud-mm-color', color );
 			} else if ( COLOR_HEX.test( color || '' ) ) {
-				$el[ 0 ].style.setProperty( '--fmm-folder-color', color );
+				$el[ 0 ].style.setProperty( '--migud-mm-folder-color', color );
 			}
 		}
 
@@ -115,7 +115,7 @@
 		function syncButton() {
 			var option = options[ indexOfValue( value ) ];
 
-			$buttonIcon.empty().prop( 'hidden', undefined === option.icon ).toggleClass( 'fmm-picker__icon--plain', !! option.plain );
+			$buttonIcon.empty().prop( 'hidden', undefined === option.icon ).toggleClass( 'migud-mm-picker__icon--plain', !! option.plain );
 			if ( undefined !== option.icon ) {
 				$buttonIcon.append( folderIconEls( option.icon ) );
 			}
@@ -207,17 +207,17 @@
 		}
 
 		_.each( options, function( option, i ) {
-			var $icon = undefined === option.icon ? null : $( '<span class="fmm-picker__icon" aria-hidden="true"></span>' ).append( folderIconEls( option.icon ) ).toggleClass( 'fmm-picker__icon--plain', !! option.plain );
-			var $li = $( '<li class="fmm-picker__option" role="option"></li>' ).attr( { id: config.listId + '-opt-' + option.value, 'data-value': option.value, 'aria-selected': 'false' } )
+			var $icon = undefined === option.icon ? null : $( '<span class="migud-mm-picker__icon" aria-hidden="true"></span>' ).append( folderIconEls( option.icon ) ).toggleClass( 'migud-mm-picker__icon--plain', !! option.plain );
+			var $li = $( '<li class="migud-mm-picker__option" role="option"></li>' ).attr( { id: config.listId + '-opt-' + option.value, 'data-value': option.value, 'aria-selected': 'false' } )
 				.css( 'padding-inline-start', ( 10 + ( option.depth || 0 ) * 16 ) + 'px' )
-				.append( $icon, $( '<span class="fmm-picker__name"></span>' ).text( option.label ), iconEl( 'check' ) );
+				.append( $icon, $( '<span class="migud-mm-picker__name"></span>' ).text( option.label ), iconEl( 'check' ) );
 
 			if ( $icon ) {
 				markColor( $icon, option.color );
 			}
 			if ( option.path ) {
 				/* translators: %s: parent folder path, e.g. "Campaigns › 2025". */
-				$li.find( '.fmm-picker__name' ).after( $( '<span class="screen-reader-text"></span>' ).text( ', ' + sprintf( __( 'in %s', 'fena-media-manager' ), option.path ) ) );
+				$li.find( '.migud-mm-picker__name' ).after( $( '<span class="screen-reader-text"></span>' ).text( ', ' + sprintf( __( 'in %s', 'migud-media-manager' ), option.path ) ) );
 			}
 			$li.on( 'mousedown', function( event ) {
 				event.preventDefault();
@@ -305,5 +305,5 @@
 		};
 	}
 
-	window.fmmPicker = { create: create, fold: fold };
+	window.migudMMPicker = { create: create, fold: fold };
 }( jQuery, window._, window.wp ) );

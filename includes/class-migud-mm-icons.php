@@ -27,7 +27,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * @package Fena_Media_Manager
+ * Exceptions: the folder icons "folder" and "folder-open" and the settings page
+ * header graphic (assets/img/migud-mm-folder-header.svg) are own designs of
+ * MIGUD Media Manager, licensed under the GPLv2 or later like the plugin.
+ *
+ * @package MIGUD_Media_Manager
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -35,7 +39,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Renders the sprite referenced by the folder sidebar through <use>.
  */
-class FMM_Icons {
+class Migud_MM_Icons {
 
 	/**
 	 * Symbol id suffix (Heroicons name) => inner SVG markup.
@@ -45,8 +49,9 @@ class FMM_Icons {
 	const ICONS = array(
 		'photo'                     => '<path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>',
 		'inbox'                     => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"/>',
-		'folder'                    => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>',
-		'folder-open'               => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/>',
+		// Own duotone folder icons (not part of Heroicons).
+		'folder'                    => '<path fill="currentColor" stroke="none" fill-opacity=".45" d="M2.5 6.5A2.5 2.5 0 0 1 5 4h3.59a2 2 0 0 1 1.42.59L11.5 6H19a2.5 2.5 0 0 1 2.5 2.5V11h-19z"/><path fill="currentColor" stroke="none" d="M2.5 10A1.5 1.5 0 0 1 4 8.5h16a1.5 1.5 0 0 1 1.5 1.5v7.5A2.5 2.5 0 0 1 19 20H5a2.5 2.5 0 0 1-2.5-2.5z"/>',
+		'folder-open'               => '<path fill="currentColor" stroke="none" fill-opacity=".45" d="M2.5 6.5A2.5 2.5 0 0 1 5 4h3.59a2 2 0 0 1 1.42.59L11.5 6H19a2.5 2.5 0 0 1 2.5 2.5V12h-19z"/><path fill="currentColor" stroke="none" d="M3.2 10.5h17.6a1.5 1.5 0 0 1 1.47 1.8l-1.15 5.7A2.5 2.5 0 0 1 18.67 20H5.33a2.5 2.5 0 0 1-2.45-2l-1.15-5.7a1.5 1.5 0 0 1 1.47-1.8z"/>',
 		'plus'                      => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>',
 		'minus'                     => '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>',
 		'arrow-right'               => '<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>',
@@ -80,7 +85,7 @@ class FMM_Icons {
 
 	/**
 	 * Folder icon key => inner markup of the Heroicons v2.2.0 outline (24px)
-	 * icon shown next to the folder icon; keys match FMM_Taxonomy::ICONS.
+	 * icon shown next to the folder icon; keys match Migud_MM_Taxonomy::ICONS.
 	 *
 	 * @var array<string,string>
 	 */
@@ -103,19 +108,19 @@ class FMM_Icons {
 	private static $printed = false;
 
 	/**
-	 * Builds the sprite: one <symbol id="fmm-i-NAME"> per icon and one <symbol id="fmm-g-KEY"> per folder glyph.
+	 * Builds the sprite: one <symbol id="migud-mm-i-NAME"> per icon and one <symbol id="migud-mm-g-KEY"> per folder glyph.
 	 *
 	 * @return string Static, plugin-owned SVG markup.
 	 */
 	public static function sprite() {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" class="fmm-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">';
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" class="migud-mm-sprite" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">';
 
 		foreach ( self::ICONS as $name => $paths ) {
-			$svg .= '<symbol id="fmm-i-' . $name . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' . $paths . '</symbol>';
+			$svg .= '<symbol id="migud-mm-i-' . $name . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' . $paths . '</symbol>';
 		}
 
 		foreach ( self::GLYPHS as $key => $paths ) {
-			$svg .= '<symbol id="fmm-g-' . $key . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' . $paths . '</symbol>';
+			$svg .= '<symbol id="migud-mm-g-' . $key . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' . $paths . '</symbol>';
 		}
 
 		return $svg . '</svg>';

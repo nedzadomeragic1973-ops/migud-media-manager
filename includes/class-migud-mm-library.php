@@ -2,7 +2,7 @@
 /**
  * Media library integration: assets, folder summary and the AJAX query filter.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
  * Loads the folder UI wherever the media modal is loaded and applies the
  * folder filter to media library queries.
  */
-class FMM_Library {
+class Migud_MM_Library {
 
 	/**
 	 * Registers the hooks.
@@ -26,7 +26,7 @@ class FMM_Library {
 	/**
 	 * Media uploader (async-upload.php, action upload-attachment): assigns the
 	 * new attachment to the folder that was active when the upload started.
-	 * The uploader sends it as `fmm_folder` ('none' for "Unassigned", which
+	 * The uploader sends it as `migud_mm_folder` ('none' for "Unassigned", which
 	 * stays unassigned); when it sends nothing ("All Media"), the default
 	 * upload folder setting applies. REST uploads, sideloads, media-new.php
 	 * and programmatic inserts are not affected.
@@ -38,22 +38,25 @@ class FMM_Library {
 			return;
 		}
 
-		if ( isset( $_POST['fmm_folder'] ) ) {
-			$folder     = sanitize_text_field( wp_unslash( $_POST['fmm_folder'] ) );
-			$folder_ids = FMM_Taxonomy::is_digits( $folder ) ? FMM_Taxonomy::filter_folder_ids( array( (int) $folder ) ) : array();
+		// Legacy adapter: an uploader loaded before the update still sends the former parameter name; the new one wins.
+		$field = isset( $_POST[ Migud_MM_Taxonomy::NAME ] ) ? Migud_MM_Taxonomy::NAME : Migud_MM_Legacy::QUERY_VAR;
+
+		if ( isset( $_POST[ $field ] ) ) {
+			$folder     = sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
+			$folder_ids = Migud_MM_Taxonomy::is_digits( $folder ) ? Migud_MM_Taxonomy::filter_folder_ids( array( (int) $folder ) ) : array();
 		} else {
-			$default    = (int) FMM_Settings::get( 'upload_folder' );
+			$default    = (int) Migud_MM_Settings::get( 'upload_folder' );
 			$folder_ids = $default ? array( $default ) : array();
 		}
 
-		if ( $folder_ids && FMM_Taxonomy::can_assign( $attachment_id ) ) {
-			wp_set_object_terms( (int) $attachment_id, $folder_ids, FMM_Taxonomy::NAME, true );
+		if ( $folder_ids && Migud_MM_Taxonomy::can_assign( $attachment_id ) ) {
+			wp_set_object_terms( (int) $attachment_id, $folder_ids, Migud_MM_Taxonomy::NAME, true );
 		}
 	}
 
 	/**
 	 * Asset version for cache busting. Released builds use the plugin
-	 * version (bump FMM_VERSION with every release); local and development
+	 * version (bump MIGUD_MM_VERSION with every release); local and development
 	 * environments or SCRIPT_DEBUG append the file modification time, so
 	 * edited files are reloaded while unchanged ones stay cached.
 	 *
@@ -63,20 +66,20 @@ class FMM_Library {
 	public static function asset_version( $file ) {
 		$dev = in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG );
 
-		if ( $dev && file_exists( FMM_PATH . $file ) ) {
-			return FMM_VERSION . '.' . filemtime( FMM_PATH . $file );
+		if ( $dev && file_exists( MIGUD_MM_PATH . $file ) ) {
+			return MIGUD_MM_VERSION . '.' . filemtime( MIGUD_MM_PATH . $file );
 		}
 
-		return FMM_VERSION;
+		return MIGUD_MM_VERSION;
 	}
 
 	/**
 	 * Registers the shared design token stylesheet (dependency of the
-	 * plugin styles; every token is scoped to the .fmm class).
+	 * plugin styles; every token is scoped to the .migud-mm class).
 	 */
 	public static function register_tokens() {
-		if ( ! wp_style_is( 'fmm-tokens', 'registered' ) ) {
-			wp_register_style( 'fmm-tokens', FMM_URL . 'assets/css/fmm-tokens.css', array(), self::asset_version( 'assets/css/fmm-tokens.css' ) );
+		if ( ! wp_style_is( 'migud-mm-tokens', 'registered' ) ) {
+			wp_register_style( 'migud-mm-tokens', MIGUD_MM_URL . 'assets/css/migud-mm-tokens.css', array(), self::asset_version( 'assets/css/migud-mm-tokens.css' ) );
 		}
 	}
 
@@ -86,12 +89,12 @@ class FMM_Library {
 	 */
 	public static function register_picker() {
 		self::register_tokens();
-		if ( ! wp_style_is( 'fmm-components', 'registered' ) ) {
-			wp_register_style( 'fmm-components', FMM_URL . 'assets/css/fmm-components.css', array( 'fmm-tokens' ), self::asset_version( 'assets/css/fmm-components.css' ) );
+		if ( ! wp_style_is( 'migud-mm-components', 'registered' ) ) {
+			wp_register_style( 'migud-mm-components', MIGUD_MM_URL . 'assets/css/migud-mm-components.css', array( 'migud-mm-tokens' ), self::asset_version( 'assets/css/migud-mm-components.css' ) );
 		}
-		if ( ! wp_script_is( 'fmm-picker', 'registered' ) ) {
-			wp_register_script( 'fmm-picker', FMM_URL . 'assets/js/fmm-picker.js', array( 'jquery', 'underscore', 'wp-i18n' ), self::asset_version( 'assets/js/fmm-picker.js' ), true );
-			wp_set_script_translations( 'fmm-picker', 'fena-media-manager', FMM_PATH . 'languages' );
+		if ( ! wp_script_is( 'migud-mm-picker', 'registered' ) ) {
+			wp_register_script( 'migud-mm-picker', MIGUD_MM_URL . 'assets/js/migud-mm-picker.js', array( 'jquery', 'underscore', 'wp-i18n' ), self::asset_version( 'assets/js/migud-mm-picker.js' ), true );
+			wp_set_script_translations( 'migud-mm-picker', 'migud-media-manager', MIGUD_MM_PATH . 'languages' );
 		}
 	}
 
@@ -101,30 +104,32 @@ class FMM_Library {
 	 * the block editor and every meta box that opens the media modal.
 	 */
 	public static function enqueue_media() {
-		if ( ! FMM_Taxonomy::can_read() || wp_script_is( 'fmm-media-filter', 'enqueued' ) ) {
+		if ( ! Migud_MM_Taxonomy::can_read() || wp_script_is( 'migud-mm-media-filter', 'enqueued' ) ) {
 			return;
 		}
 
 		self::register_tokens();
-		wp_enqueue_style( 'fmm-media', FMM_URL . 'assets/css/fmm-media.css', array( 'fmm-tokens' ), self::asset_version( 'assets/css/fmm-media.css' ) );
+		wp_enqueue_style( 'migud-mm-media', MIGUD_MM_URL . 'assets/css/migud-mm-media.css', array( 'migud-mm-tokens' ), self::asset_version( 'assets/css/migud-mm-media.css' ) );
 		wp_enqueue_script(
-			'fmm-media-filter',
-			FMM_URL . 'assets/js/fmm-media-filter.js',
+			'migud-mm-media-filter',
+			MIGUD_MM_URL . 'assets/js/migud-mm-media-filter.js',
 			array( 'jquery', 'underscore', 'backbone', 'media-views', 'wp-api-fetch', 'wp-i18n', 'wp-a11y' ),
-			self::asset_version( 'assets/js/fmm-media-filter.js' ),
+			self::asset_version( 'assets/js/migud-mm-media-filter.js' ),
 			true
 		);
-		wp_set_script_translations( 'fmm-media-filter', 'fena-media-manager', FMM_PATH . 'languages' );
+		wp_set_script_translations( 'migud-mm-media-filter', 'migud-media-manager', MIGUD_MM_PATH . 'languages' );
 		wp_localize_script(
-			'fmm-media-filter',
-			'fmmMediaSettings',
+			'migud-mm-media-filter',
+			'migudMMMediaSettings',
 			array_merge(
 				self::get_summary(),
 				array(
-					'canManage'    => FMM_Taxonomy::can_manage(),
-					'treeExpanded' => (bool) FMM_Settings::get( 'tree_expanded' ),
-					'restoreLast'  => (bool) FMM_Settings::get( 'restore_last_folder' ),
-					'storageKey'   => 'fmm-last-folder-' . get_current_blog_id() . '-' . get_current_user_id(),
+					'canManage'    => Migud_MM_Taxonomy::can_manage(),
+					'treeExpanded' => (bool) Migud_MM_Settings::get( 'tree_expanded' ),
+					'restoreLast'  => (bool) Migud_MM_Settings::get( 'restore_last_folder' ),
+					'storageKey'   => 'migud-mm-last-folder-' . get_current_blog_id() . '-' . get_current_user_id(),
+					// Legacy adapter: value stored by the former scripts, moved to storageKey once.
+					'legacyKey'    => Migud_MM_Legacy::STORAGE_KEY_PREFIX . get_current_blog_id() . '-' . get_current_user_id(),
 				)
 			)
 		);
@@ -138,31 +143,31 @@ class FMM_Library {
 	 */
 	public static function enqueue_upload_screen( $hook_suffix ) {
 		// The folder store is only registered once wp_enqueue_media() ran (grid mode); the list view has no sidebar.
-		if ( 'upload.php' !== $hook_suffix || ! FMM_Taxonomy::can_read() || ! wp_script_is( 'fmm-media-filter', 'registered' ) ) {
+		if ( 'upload.php' !== $hook_suffix || ! Migud_MM_Taxonomy::can_read() || ! wp_script_is( 'migud-mm-media-filter', 'registered' ) ) {
 			return;
 		}
 
 		self::register_tokens();
 		self::register_picker();
-		wp_enqueue_style( 'fmm-components' );
-		wp_enqueue_style( 'fmm-media', FMM_URL . 'assets/css/fmm-media.css', array( 'fmm-tokens', 'fmm-components' ), self::asset_version( 'assets/css/fmm-media.css' ) );
+		wp_enqueue_style( 'migud-mm-components' );
+		wp_enqueue_style( 'migud-mm-media', MIGUD_MM_URL . 'assets/css/migud-mm-media.css', array( 'migud-mm-tokens', 'migud-mm-components' ), self::asset_version( 'assets/css/migud-mm-media.css' ) );
 		wp_enqueue_script(
-			'fmm-folder-sidebar',
-			FMM_URL . 'assets/js/fmm-folder-sidebar.js',
-			array( 'fmm-media-filter', 'fmm-picker' ),
-			self::asset_version( 'assets/js/fmm-folder-sidebar.js' ),
+			'migud-mm-folder-sidebar',
+			MIGUD_MM_URL . 'assets/js/migud-mm-folder-sidebar.js',
+			array( 'migud-mm-media-filter', 'migud-mm-picker' ),
+			self::asset_version( 'assets/js/migud-mm-folder-sidebar.js' ),
 			true
 		);
-		wp_set_script_translations( 'fmm-folder-sidebar', 'fena-media-manager', FMM_PATH . 'languages' );
+		wp_set_script_translations( 'migud-mm-folder-sidebar', 'migud-media-manager', MIGUD_MM_PATH . 'languages' );
 		wp_enqueue_script(
-			'fmm-upload-progress',
-			FMM_URL . 'assets/js/fmm-upload-progress.js',
-			array( 'fmm-media-filter' ),
-			self::asset_version( 'assets/js/fmm-upload-progress.js' ),
+			'migud-mm-upload-progress',
+			MIGUD_MM_URL . 'assets/js/migud-mm-upload-progress.js',
+			array( 'migud-mm-media-filter' ),
+			self::asset_version( 'assets/js/migud-mm-upload-progress.js' ),
 			true
 		);
-		wp_set_script_translations( 'fmm-upload-progress', 'fena-media-manager', FMM_PATH . 'languages' );
-		add_action( 'admin_footer', array( 'FMM_Icons', 'print_sprite' ) );
+		wp_set_script_translations( 'migud-mm-upload-progress', 'migud-media-manager', MIGUD_MM_PATH . 'languages' );
+		add_action( 'admin_footer', array( 'Migud_MM_Icons', 'print_sprite' ) );
 	}
 
 	/**
@@ -172,8 +177,8 @@ class FMM_Library {
 	 */
 	public static function get_summary() {
 		return array(
-			'folders'    => FMM_Taxonomy::get_folders(),
-			'sort'       => FMM_Taxonomy::sort_mode(),
+			'folders'    => Migud_MM_Taxonomy::get_folders(),
+			'sort'       => Migud_MM_Taxonomy::sort_mode(),
 			'total'      => self::count_attachments(),
 			'unassigned' => self::count_attachments( array( self::tax_clause( 'none' ) ) ),
 		);
@@ -218,14 +223,14 @@ class FMM_Library {
 
 		if ( 'none' === $value ) {
 			return array(
-				'taxonomy' => FMM_Taxonomy::NAME,
+				'taxonomy' => Migud_MM_Taxonomy::NAME,
 				'operator' => 'NOT EXISTS',
 			);
 		}
 
-		if ( FMM_Taxonomy::is_digits( $value ) && (int) $value > 0 ) {
+		if ( Migud_MM_Taxonomy::is_digits( $value ) && (int) $value > 0 ) {
 			return array(
-				'taxonomy'         => FMM_Taxonomy::NAME,
+				'taxonomy'         => Migud_MM_Taxonomy::NAME,
 				'field'            => 'term_id',
 				'terms'            => array( (int) $value ),
 				'include_children' => false,
@@ -261,17 +266,39 @@ class FMM_Library {
 	 * @return array
 	 */
 	public static function filter_ajax_query( $query ) {
-		if ( ! array_key_exists( FMM_Taxonomy::NAME, $query ) ) {
-			return $query;
+		if ( ! array_key_exists( Migud_MM_Taxonomy::NAME, $query ) ) {
+			$legacy = self::legacy_query_value();
+			if ( null === $legacy ) {
+				return $query;
+			}
+			$query[ Migud_MM_Taxonomy::NAME ] = $legacy;
 		}
 
-		$clause = self::tax_clause( $query[ FMM_Taxonomy::NAME ] );
-		unset( $query[ FMM_Taxonomy::NAME ] );
+		$clause = self::tax_clause( $query[ Migud_MM_Taxonomy::NAME ] );
+		unset( $query[ Migud_MM_Taxonomy::NAME ] );
 
 		if ( $clause ) {
 			$query['tax_query'] = self::merge_tax_query( isset( $query['tax_query'] ) ? $query['tax_query'] : array(), $clause ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Folder filter.
 		}
 
 		return $query;
+	}
+
+	/**
+	 * Legacy adapter: folder filter value sent as the former query prop
+	 * `fmm_folder` (media library loaded before the update). Core drops it from the query args
+	 * because it is no longer a registered query var, so it is read from the
+	 * request of the query-attachments call.
+	 *
+	 * @return string|null Value, or null when it was not sent.
+	 */
+	private static function legacy_query_value() {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only filter value of core's query-attachments request, which has no nonce; capabilities are checked by core.
+		$value = isset( $_REQUEST['query'] ) && is_array( $_REQUEST['query'] ) && isset( $_REQUEST['query'][ Migud_MM_Legacy::QUERY_VAR ] ) && is_scalar( $_REQUEST['query'][ Migud_MM_Legacy::QUERY_VAR ] )
+			? sanitize_text_field( wp_unslash( $_REQUEST['query'][ Migud_MM_Legacy::QUERY_VAR ] ) )
+			: null;
+		// phpcs:enable
+
+		return $value;
 	}
 }

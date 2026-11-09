@@ -1,33 +1,33 @@
 /**
- * Fena Media Manager: folder sidebar of the media library grid (upload.php).
+ * MIGUD Media Manager: folder sidebar of the media library grid (upload.php).
  *
  * Folder navigation, create/rename/delete, assigning the core "Bulk select"
  * selection to folders, and native drag-and-drop of grid items onto folders.
  * Uses only the public `wp-media-grid-ready` event, the library query props
  * and the frame selection; no core view is extended here.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 ( function( $, _, wp ) {
 	'use strict';
 
-	var fmm = window.fmmMedia;
+	var migudMM = window.migudMMMedia;
 
-	if ( ! fmm || ! wp || ! wp.apiFetch || ! window.fmmPicker ) {
+	if ( ! migudMM || ! wp || ! wp.apiFetch || ! window.migudMMPicker ) {
 		return;
 	}
 
 	var __ = wp.i18n.__;
 	var _n = wp.i18n._n;
 	var sprintf = wp.i18n.sprintf;
-	var store = fmm.store;
-	var PROP = fmm.prop;
-	var DRAG_TYPE = 'application/x-fmm-media';
-	var FOLDER_DRAG_TYPE = 'application/x-fmm-folder';
+	var store = migudMM.store;
+	var PROP = migudMM.prop;
+	var DRAG_TYPE = 'application/x-migud-mm-media';
+	var FOLDER_DRAG_TYPE = 'application/x-migud-mm-folder';
 	// Hover-capable desktop after a real pointer has been used: row actions are created on demand (see needsActions()).
 	var LAZY_QUERY = '(hover: hover) and (pointer: fine) and (min-width: 783px)';
-	var RAIL_ID = 'fmm-folders-panel';
+	var RAIL_ID = 'migud-mm-folders-panel';
 	var PHONE_QUERY = '(max-width: 600px)';
 	var COLOR_PRESETS = [ 'blue', 'violet', 'sand', 'green' ];
 	var COLOR_HEX = /^#[0-9a-f]{6}$/i;
@@ -35,7 +35,7 @@
 
 	/*
 	 * Logical icon names, mapped to Heroicons symbols of the inline sprite
-	 * (FMM_Icons, id "fmm-i-<name>").
+	 * (Migud_MM_Icons, id "migud-mm-i-<name>").
 	 */
 	var ICONS = {
 		all: 'photo',
@@ -81,10 +81,10 @@
 		if ( ! node ) {
 			node = iconCache[ name ] = document.createElementNS( SVG_NS, 'svg' );
 			use = document.createElementNS( SVG_NS, 'use' );
-			node.setAttribute( 'class', 'fmm-icon fmm-icon--' + name );
+			node.setAttribute( 'class', 'migud-mm-icon migud-mm-icon--' + name );
 			node.setAttribute( 'aria-hidden', 'true' );
 			node.setAttribute( 'focusable', 'false' );
-			use.setAttribute( 'href', '#fmm-i-' + ( ICONS[ name ] || name ) );
+			use.setAttribute( 'href', '#migud-mm-i-' + ( ICONS[ name ] || name ) );
 			node.appendChild( use );
 		}
 
@@ -95,21 +95,21 @@
 		return $( iconEl( name ) );
 	}
 
-	// Folder icons (stored keys, see FMM_Taxonomy::ICONS): glyphs drawn inside the folder.
+	// Folder icons (stored keys, see Migud_MM_Taxonomy::ICONS): glyphs drawn inside the folder.
 	var FOLDER_ICONS = [ 'image', 'video', 'document', 'audio', 'archive', 'star', 'people', 'tag' ];
 	var glyphCache = {};
 
 	function iconLabels() {
 		return {
-			'': __( 'None (Default)', 'fena-media-manager' ),
-			image: __( 'Image', 'fena-media-manager' ),
-			video: __( 'Video', 'fena-media-manager' ),
-			document: __( 'Document', 'fena-media-manager' ),
-			audio: __( 'Audio', 'fena-media-manager' ),
-			archive: __( 'Archive', 'fena-media-manager' ),
-			star: __( 'Star', 'fena-media-manager' ),
-			people: __( 'People', 'fena-media-manager' ),
-			tag: __( 'Tag', 'fena-media-manager' )
+			'': __( 'None (Default)', 'migud-media-manager' ),
+			image: __( 'Image', 'migud-media-manager' ),
+			video: __( 'Video', 'migud-media-manager' ),
+			document: __( 'Document', 'migud-media-manager' ),
+			audio: __( 'Audio', 'migud-media-manager' ),
+			archive: __( 'Archive', 'migud-media-manager' ),
+			star: __( 'Star', 'migud-media-manager' ),
+			people: __( 'People', 'migud-media-manager' ),
+			tag: __( 'Tag', 'migud-media-manager' )
 		};
 	}
 
@@ -121,10 +121,10 @@
 		if ( ! node ) {
 			node = glyphCache[ key ] = document.createElementNS( SVG_NS, 'svg' );
 			use = document.createElementNS( SVG_NS, 'use' );
-			node.setAttribute( 'class', 'fmm-icon fmm-folder__glyph' );
+			node.setAttribute( 'class', 'migud-mm-icon migud-mm-folder__glyph' );
 			node.setAttribute( 'aria-hidden', 'true' );
 			node.setAttribute( 'focusable', 'false' );
-			use.setAttribute( 'href', '#fmm-g-' + key );
+			use.setAttribute( 'href', '#migud-mm-g-' + key );
 			node.appendChild( use );
 		}
 
@@ -147,10 +147,10 @@
 		var svg = document.createElementNS( SVG_NS, 'svg' );
 		var use = document.createElementNS( SVG_NS, 'use' );
 
-		svg.setAttribute( 'class', 'fmm-icon' );
+		svg.setAttribute( 'class', 'migud-mm-icon' );
 		svg.setAttribute( 'aria-hidden', 'true' );
 		svg.setAttribute( 'focusable', 'false' );
-		use.setAttribute( 'href', '#fmm-g-' + key );
+		use.setAttribute( 'href', '#migud-mm-g-' + key );
 		svg.appendChild( use );
 
 		return svg;
@@ -182,15 +182,15 @@
 		var folder;
 
 		if ( ! TPL ) {
-			folder = tag( 'button', 'fmm-folder', 'button' );
-			folder.appendChild( tag( 'span', 'fmm-folder__name' ) );
-			folder.appendChild( tag( 'span', 'fmm-folder__count' ) );
+			folder = tag( 'button', 'migud-mm-folder', 'button' );
+			folder.appendChild( tag( 'span', 'migud-mm-folder__name' ) );
+			folder.appendChild( tag( 'span', 'migud-mm-folder__count' ) );
 			TPL = {
-				li: tag( 'li', 'fmm-sidebar__item' ),
+				li: tag( 'li', 'migud-mm-sidebar__item' ),
 				folder: folder,
-				toggle: tag( 'button', 'fmm-folder-toggle', 'button' ),
-				actions: tag( 'span', 'fmm-folder__actions' ),
-				assign: tag( 'span', 'fmm-folder__assign' )
+				toggle: tag( 'button', 'migud-mm-folder-toggle', 'button' ),
+				actions: tag( 'span', 'migud-mm-folder__actions' ),
+				assign: tag( 'span', 'migud-mm-folder__assign' )
 			};
 		}
 
@@ -200,37 +200,37 @@
 	function strings() {
 		return STR || ( STR = {
 			/* translators: %s: folder name. */
-			subfolder: __( 'New subfolder in “%s”', 'fena-media-manager' ),
+			subfolder: __( 'New subfolder in “%s”', 'migud-media-manager' ),
 			/* translators: %s: folder name. */
-			more: __( 'More actions for “%s”', 'fena-media-manager' ),
+			more: __( 'More actions for “%s”', 'migud-media-manager' ),
 			/* translators: %s: folder name. */
-			hide: __( 'Hide subfolders of “%s”', 'fena-media-manager' ),
+			hide: __( 'Hide subfolders of “%s”', 'migud-media-manager' ),
 			/* translators: %s: folder name. */
-			show: __( 'Show subfolders of “%s”', 'fena-media-manager' )
+			show: __( 'Show subfolders of “%s”', 'migud-media-manager' )
 		} );
 	}
 
 	function countLabel( count ) {
 		/* translators: %d: number of media items. */
-		return countLabels[ count ] || ( countLabels[ count ] = sprintf( _n( '%d item', '%d items', count, 'fena-media-manager' ), count ) );
+		return countLabels[ count ] || ( countLabels[ count ] = sprintf( _n( '%d item', '%d items', count, 'migud-media-manager' ), count ) );
 	}
 
 	// Assign button labels: the plural form depends on the selection size, so the format is chosen once per pass.
 	function addLabel( ctx, name ) {
 		/* translators: 1: number of media files, 2: folder name. */
-		ctx.addFmt = ctx.addFmt || _n( 'Add %1$d selected media file to “%2$s”', 'Add %1$d selected media files to “%2$s”', ctx.selected, 'fena-media-manager' );
+		ctx.addFmt = ctx.addFmt || _n( 'Add %1$d selected media file to “%2$s”', 'Add %1$d selected media files to “%2$s”', ctx.selected, 'migud-media-manager' );
 		return sprintf( ctx.addFmt, ctx.selected, name );
 	}
 
 	function moveLabel( ctx, name ) {
 		/* translators: 1: number of media files, 2: source folder name, 3: target folder name. */
-		ctx.moveFmt = ctx.moveFmt || _n( 'Move %1$d selected media file from “%2$s” to “%3$s”', 'Move %1$d selected media files from “%2$s” to “%3$s”', ctx.selected, 'fena-media-manager' );
+		ctx.moveFmt = ctx.moveFmt || _n( 'Move %1$d selected media file from “%2$s” to “%3$s”', 'Move %1$d selected media files from “%2$s” to “%3$s”', ctx.selected, 'migud-media-manager' );
 		return sprintf( ctx.moveFmt, ctx.selected, ctx.sourceName, name );
 	}
 
 	function removeLabel( count, name ) {
 		/* translators: 1: number of media files, 2: folder name. */
-		return sprintf( _n( 'Remove %1$d selected media file from “%2$s”', 'Remove %1$d selected media files from “%2$s”', count, 'fena-media-manager' ), count, name );
+		return sprintf( _n( 'Remove %1$d selected media file from “%2$s”', 'Remove %1$d selected media files from “%2$s”', count, 'migud-media-manager' ), count, name );
 	}
 
 	/*
@@ -256,13 +256,59 @@
 	}
 
 	/**
+	 * Whether a stored last folder can be restored: "Unassigned" or an existing folder.
+	 *
+	 * @param {string|null} value Stored value.
+	 * @return {boolean} Valid.
+	 */
+	function isRestorable( value ) {
+		return 'none' === value || ( /^\d+$/.test( value || '' ) && !! store.get( value ) );
+	}
+
+	/**
+	 * Moves the last folder stored by the former scripts (store.legacyKey) to
+	 * store.storageKey once. A valid new value is never overwritten; the former
+	 * value is removed only after the new key holds it, or when it cannot be
+	 * restored anyway. On storage errors both values stay as they are, so a
+	 * later run can try again.
+	 *
+	 * @param {Storage} saved Local storage.
+	 * @return {string|null} Former value that could not be copied but can still be restored now.
+	 */
+	function adoptLegacyFolder( saved ) {
+		var legacy = null;
+
+		if ( ! store.legacyKey || store.legacyKey === store.storageKey ) {
+			return null;
+		}
+
+		try {
+			legacy = saved.getItem( store.legacyKey );
+			if ( null === legacy ) {
+				return null;
+			}
+			if ( isRestorable( legacy ) && ! isRestorable( saved.getItem( store.storageKey ) ) ) {
+				saved.setItem( store.storageKey, legacy );
+				if ( saved.getItem( store.storageKey ) !== legacy ) {
+					return legacy;
+				}
+			}
+			saved.removeItem( store.legacyKey );
+		} catch ( e ) {
+			return legacy && isRestorable( legacy ) ? legacy : null;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Lowercases a string and removes accents, remembering for every result
 	 * character the index of the original character it came from.
 	 *
 	 * @param {string} value Text.
 	 * @return {Object} { text, map } with map[ i ] = original index of text[ i ].
 	 */
-	var fold = window.fmmPicker.fold;
+	var fold = window.migudMMPicker.fold;
 
 
 	/**
@@ -307,30 +353,30 @@
 		}
 		this.restoreFolder();
 
-		this.$el = $( '<nav class="fmm fmm-sidebar"></nav>' ).attr( 'aria-label', __( 'Folders', 'fena-media-manager' ) );
+		this.$el = $( '<nav class="migud-mm migud-mm-sidebar"></nav>' ).attr( 'aria-label', __( 'Folders', 'migud-media-manager' ) );
 		this.$el.append(
-			$( '<div class="fmm-sidebar__header"></div>' ).append(
-				$( '<h2 class="fmm-sidebar__title"></h2>' ).text( __( 'Folders', 'fena-media-manager' ) ),
-				store.canManage ? $( '<button type="button" class="fmm-sidebar__new" data-fmm-key="new"></button>' )
-					.append( icon( 'create' ), $( '<span></span>' ).text( __( 'New Folder', 'fena-media-manager' ) ) ) : null,
-				$( '<div class="fmm-sort fmm-sort--panel"></div>' ).append(
-					$( '<button type="button" class="fmm-panel-toggle" data-fmm-key="collapse-panel" aria-expanded="true"></button>' )
-						.attr( { 'aria-controls': RAIL_ID, 'aria-label': __( 'Collapse folders panel', 'fena-media-manager' ), title: __( 'Collapse folders panel', 'fena-media-manager' ) } ).append( icon( 'panel-close' ) )
+			$( '<div class="migud-mm-sidebar__header"></div>' ).append(
+				$( '<h2 class="migud-mm-sidebar__title"></h2>' ).text( __( 'Folders', 'migud-media-manager' ) ),
+				store.canManage ? $( '<button type="button" class="migud-mm-sidebar__new" data-migud-mm-key="new"></button>' )
+					.append( icon( 'create' ), $( '<span></span>' ).text( __( 'New Folder', 'migud-media-manager' ) ) ) : null,
+				$( '<div class="migud-mm-sort migud-mm-sort--panel"></div>' ).append(
+					$( '<button type="button" class="migud-mm-panel-toggle" data-migud-mm-key="collapse-panel" aria-expanded="true"></button>' )
+						.attr( { 'aria-controls': RAIL_ID, 'aria-label': __( 'Collapse folders panel', 'migud-media-manager' ), title: __( 'Collapse folders panel', 'migud-media-manager' ) } ).append( icon( 'panel-close' ) )
 				)
 			),
-			$( '<div class="fmm-sidebar__toolbar"></div>' ).append( this.searchControl(), this.sortControl(), this.helpControl() ),
-			$( '<div class="fmm-sidebar__notice fmm-notice-ui notice inline is-dismissible" hidden></div>' ).append(
-				'<span class="fmm-notice-ui__icon" aria-hidden="true"></span>',
+			$( '<div class="migud-mm-sidebar__toolbar"></div>' ).append( this.searchControl(), this.sortControl(), this.helpControl() ),
+			$( '<div class="migud-mm-sidebar__notice migud-mm-notice-ui notice inline is-dismissible" hidden></div>' ).append(
+				'<span class="migud-mm-notice-ui__icon" aria-hidden="true"></span>',
 				'<p></p>',
 				$( '<button type="button" class="notice-dismiss"></button>' ).append(
 					icon( 'dismiss' ),
-					$( '<span class="screen-reader-text"></span>' ).text( __( 'Dismiss this notice.', 'fena-media-manager' ) )
+					$( '<span class="screen-reader-text"></span>' ).text( __( 'Dismiss this notice.', 'migud-media-manager' ) )
 				)
 			),
-			'<p class="fmm-sidebar__selection" hidden></p>',
-			'<ul class="fmm-sidebar__list"></ul>'
+			'<p class="migud-mm-sidebar__selection" hidden></p>',
+			'<ul class="migud-mm-sidebar__list"></ul>'
 		);
-		this.list = this.$el.find( '.fmm-sidebar__list' )[ 0 ];
+		this.list = this.$el.find( '.migud-mm-sidebar__list' )[ 0 ];
 
 		this.bind();
 		this.bindDrag();
@@ -347,20 +393,30 @@
 		restoreFolder: function() {
 			var self = this;
 			var saved = store.restoreLast && store.storageKey ? storage() : null;
-			var value;
+			var value, pending;
 
 			if ( ! saved ) {
 				return;
 			}
 
+			pending = adoptLegacyFolder( saved );
+
 			try {
 				value = saved.getItem( store.storageKey );
-				if ( value && ( 'none' === value || ( /^\d+$/.test( value ) && store.get( value ) ) ) ) {
+				if ( value && isRestorable( value ) ) {
 					this.library.props.set( PROP, value );
-				} else if ( null !== value ) {
-					saved.removeItem( store.storageKey );
+				} else {
+					if ( null !== value ) {
+						saved.removeItem( store.storageKey );
+					}
+					if ( pending ) {
+						this.library.props.set( PROP, pending );
+					}
 				}
 			} catch ( e ) {
+				if ( pending ) {
+					this.library.props.set( PROP, pending );
+				}
 				return;
 			}
 
@@ -385,10 +441,10 @@
 		 * @return {jQuery} Search control.
 		 */
 		searchControl: function() {
-			return $( '<div class="fmm-search" role="search"></div>' ).append(
-				$( '<label class="screen-reader-text" for="fmm-folder-search"></label>' ).text( __( 'Search folders', 'fena-media-manager' ) ),
-				icon( 'search' ).addClass( 'fmm-search__icon' ),
-				$( '<input type="search" id="fmm-folder-search" class="fmm-search__input" autocomplete="off" spellcheck="false" />' ).attr( 'placeholder', __( 'Search folders…', 'fena-media-manager' ) )
+			return $( '<div class="migud-mm-search" role="search"></div>' ).append(
+				$( '<label class="screen-reader-text" for="migud-mm-folder-search"></label>' ).text( __( 'Search folders', 'migud-media-manager' ) ),
+				icon( 'search' ).addClass( 'migud-mm-search__icon' ),
+				$( '<input type="search" id="migud-mm-folder-search" class="migud-mm-search__input" autocomplete="off" spellcheck="false" />' ).attr( 'placeholder', __( 'Search folders…', 'migud-media-manager' ) )
 			);
 		},
 
@@ -445,10 +501,10 @@
 				if ( self.query ) {
 					wp.a11y.speak( self.matchCount ?
 						/* translators: %d: number of folders. */
-						sprintf( _n( '%d folder found.', '%d folders found.', self.matchCount, 'fena-media-manager' ), self.matchCount ) :
-						__( 'No folders found.', 'fena-media-manager' ), 'polite' );
+						sprintf( _n( '%d folder found.', '%d folders found.', self.matchCount, 'migud-media-manager' ), self.matchCount ) :
+						__( 'No folders found.', 'migud-media-manager' ), 'polite' );
 				} else if ( cleared ) {
-					wp.a11y.speak( __( 'Search cleared.', 'fena-media-manager' ), 'polite' );
+					wp.a11y.speak( __( 'Search cleared.', 'migud-media-manager' ), 'polite' );
 				}
 			}, 400 );
 		},
@@ -498,7 +554,7 @@
 				return;
 			}
 
-			mark = tag( 'mark', 'fmm-search__mark' );
+			mark = tag( 'mark', 'migud-mm-search__mark' );
 			mark.textContent = name.slice( match.start, match.end );
 			el.appendChild( document.createTextNode( name.slice( 0, match.start ) ) );
 			el.appendChild( mark );
@@ -511,23 +567,23 @@
 		 * @return {jQuery} Sort control.
 		 */
 		sortControl: function() {
-			var $menu = $( '<div id="fmm-sort-menu" class="fmm-sort__menu" role="menu" aria-labelledby="fmm-folder-sort" hidden></div>' );
+			var $menu = $( '<div id="migud-mm-sort-menu" class="migud-mm-sort__menu" role="menu" aria-labelledby="migud-mm-folder-sort" hidden></div>' );
 
 			this.sortModes = {
-				name_asc: __( 'Name (A–Z)', 'fena-media-manager' ),
-				name_desc: __( 'Name (Z–A)', 'fena-media-manager' ),
-				newest: __( 'Newest first', 'fena-media-manager' ),
-				oldest: __( 'Oldest first', 'fena-media-manager' ),
-				manual: __( 'Manual order', 'fena-media-manager' )
+				name_asc: __( 'Name (A–Z)', 'migud-media-manager' ),
+				name_desc: __( 'Name (Z–A)', 'migud-media-manager' ),
+				newest: __( 'Newest first', 'migud-media-manager' ),
+				oldest: __( 'Oldest first', 'migud-media-manager' ),
+				manual: __( 'Manual order', 'migud-media-manager' )
 			};
 
 			_.each( this.sortModes, function( label, mode ) {
-				$menu.append( $( '<button type="button" class="fmm-sort__item" role="menuitemradio" aria-checked="false" tabindex="-1"></button>' )
+				$menu.append( $( '<button type="button" class="migud-mm-sort__item" role="menuitemradio" aria-checked="false" tabindex="-1"></button>' )
 					.attr( 'data-sort', mode ).append( icon( 'check' ), $( '<span></span>' ).text( label ) ) );
 			} );
 
-			return $( '<div class="fmm-sort"></div>' ).append(
-				$( '<button type="button" id="fmm-folder-sort" class="fmm-sort__button" aria-haspopup="menu" aria-expanded="false" aria-controls="fmm-sort-menu"></button>' ).append( icon( 'sort' ) ),
+			return $( '<div class="migud-mm-sort"></div>' ).append(
+				$( '<button type="button" id="migud-mm-folder-sort" class="migud-mm-sort__button" aria-haspopup="menu" aria-expanded="false" aria-controls="migud-mm-sort-menu"></button>' ).append( icon( 'sort' ) ),
 				$menu
 			);
 		},
@@ -537,10 +593,10 @@
 		 */
 		syncSort: function() {
 			/* translators: %s: current sort order, e.g. "Name (A–Z)". */
-			var label = sprintf( __( 'Sort folders: %s', 'fena-media-manager' ), this.sortModes[ store.sort ] || '' );
+			var label = sprintf( __( 'Sort folders: %s', 'migud-media-manager' ), this.sortModes[ store.sort ] || '' );
 
-			this.$el.find( '.fmm-sort__button' ).attr( { 'aria-label': label, title: label } );
-			this.$el.find( '.fmm-sort__item' ).each( function() {
+			this.$el.find( '.migud-mm-sort__button' ).attr( { 'aria-label': label, title: label } );
+			this.$el.find( '.migud-mm-sort__item' ).each( function() {
 				this.setAttribute( 'aria-checked', String( this.getAttribute( 'data-sort' ) === store.sort ) );
 			} );
 		},
@@ -556,9 +612,9 @@
 			if ( this.menuOpen ) {
 				this.closeMenu();
 			}
-			this.$el.find( '.fmm-sort__button' ).attr( 'aria-expanded', 'true' );
-			this.$el.find( '.fmm-sort__menu' ).prop( 'hidden', false );
-			$items = this.$el.find( '.fmm-sort__item' );
+			this.$el.find( '.migud-mm-sort__button' ).attr( 'aria-expanded', 'true' );
+			this.$el.find( '.migud-mm-sort__menu' ).prop( 'hidden', false );
+			$items = this.$el.find( '.migud-mm-sort__item' );
 			( last ? $items.last() : $items.filter( '[aria-checked="true"]' ).first() ).trigger( 'focus' );
 		},
 
@@ -568,15 +624,15 @@
 		 * @param {boolean} [refocus] Move focus back to the button.
 		 */
 		closeSort: function( refocus ) {
-			this.$el.find( '.fmm-sort__button' ).attr( 'aria-expanded', 'false' );
-			this.$el.find( '.fmm-sort__menu' ).prop( 'hidden', true );
+			this.$el.find( '.migud-mm-sort__button' ).attr( 'aria-expanded', 'false' );
+			this.$el.find( '.migud-mm-sort__menu' ).prop( 'hidden', true );
 			if ( refocus ) {
-				this.$el.find( '.fmm-sort__button' ).trigger( 'focus' );
+				this.$el.find( '.migud-mm-sort__button' ).trigger( 'focus' );
 			}
 		},
 
 		isSortOpen: function() {
-			return ! this.$el.find( '.fmm-sort__menu' ).prop( 'hidden' );
+			return ! this.$el.find( '.migud-mm-sort__menu' ).prop( 'hidden' );
 		},
 
 		/**
@@ -595,10 +651,10 @@
 			store.setSort( mode ).then( function() {
 				if ( wp.a11y ) {
 					/* translators: %s: sort order, e.g. "Name (A–Z)". */
-					wp.a11y.speak( sprintf( __( 'Folders sorted: %s.', 'fena-media-manager' ), label ), 'polite' );
+					wp.a11y.speak( sprintf( __( 'Folders sorted: %s.', 'migud-media-manager' ), label ), 'polite' );
 				}
 			} ).catch( function( error ) {
-				self.fail( error, __( 'The sort order could not be saved.', 'fena-media-manager' ) );
+				self.fail( error, __( 'The sort order could not be saved.', 'migud-media-manager' ) );
 				self.syncSort();
 			} );
 		},
@@ -692,7 +748,7 @@
 				this.selection.each( function( model ) {
 					var seen = {};
 
-					_.each( model.get( 'fmmFolders' ) || [], function( id ) {
+					_.each( model.get( 'migudMMFolders' ) || [], function( id ) {
 						var key = String( Number( id ) );
 
 						if ( ! seen[ key ] ) {
@@ -716,14 +772,14 @@
 			store.on( 'change', this.render, this );
 			this.library.props.on( 'change:' + PROP, this.folderChanged, this );
 			if ( this.selection ) {
-				this.selection.on( 'add remove reset change:fmmFolders', this.queueSelection, this );
+				this.selection.on( 'add remove reset change:migudMMFolders', this.queueSelection, this );
 			}
 
-			this.$el.on( 'click', '.fmm-sidebar__new', function() {
+			this.$el.on( 'click', '.migud-mm-sidebar__new', function() {
 				self.startEdit( 'new' );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder', function() {
+			this.$el.on( 'click', '.migud-mm-folder', function() {
 				var value = rowValue( this );
 				self.library.props.set( PROP, '' === value ? null : value );
 				if ( self.drawerOpen && self.isPhone() ) {
@@ -732,19 +788,19 @@
 			} );
 
 			// Separate button: expanding never selects the folder.
-			this.$el.on( 'click', '.fmm-folder-toggle[aria-expanded]', function() {
+			this.$el.on( 'click', '.migud-mm-folder-toggle[aria-expanded]', function() {
 				self.toggleFolder( rowValue( this ) );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-subfolder', function() {
+			this.$el.on( 'click', '.migud-mm-folder-subfolder', function() {
 				self.startEdit( 'new', rowValue( this ) );
 			} );
 
-			this.$el.on( 'input search', '.fmm-search__input', function() {
+			this.$el.on( 'input search', '.migud-mm-search__input', function() {
 				self.setQuery( $( this ).val(), false );
 			} );
 
-			this.$el.on( 'keydown', '.fmm-search__input', function( event ) {
+			this.$el.on( 'keydown', '.migud-mm-search__input', function( event ) {
 				var $first;
 
 				if ( 'Escape' === event.key && $( this ).val() ) {
@@ -754,7 +810,7 @@
 					self.setQuery( '', true );
 				} else if ( 'ArrowDown' === event.key ) {
 					self.flushSearch();
-					$first = self.$el.find( '.fmm-sidebar__item--folder .fmm-folder' ).first();
+					$first = self.$el.find( '.migud-mm-sidebar__item--folder .migud-mm-folder' ).first();
 					if ( $first.length ) {
 						event.preventDefault();
 						$first.trigger( 'focus' );
@@ -765,7 +821,7 @@
 				}
 			} );
 
-			this.$el.on( 'click', '.fmm-sort__button', function() {
+			this.$el.on( 'click', '.migud-mm-sort__button', function() {
 				if ( self.isSortOpen() ) {
 					self.closeSort( false );
 				} else {
@@ -773,19 +829,19 @@
 				}
 			} );
 
-			this.$el.on( 'keydown', '.fmm-sort__button', function( event ) {
+			this.$el.on( 'keydown', '.migud-mm-sort__button', function( event ) {
 				if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
 					event.preventDefault();
 					self.openSort( 'ArrowUp' === event.key );
 				}
 			} );
 
-			this.$el.on( 'click', '.fmm-sort__item', function() {
+			this.$el.on( 'click', '.migud-mm-sort__item', function() {
 				self.chooseSort( this.getAttribute( 'data-sort' ) );
 			} );
 
-			this.$el.on( 'keydown', '.fmm-sort__menu', function( event ) {
-				var $items = $( this ).find( '.fmm-sort__item' );
+			this.$el.on( 'keydown', '.migud-mm-sort__menu', function( event ) {
+				var $items = $( this ).find( '.migud-mm-sort__item' );
 				var index = $items.index( document.activeElement );
 
 				if ( 'Escape' === event.key ) {
@@ -821,12 +877,12 @@
 			} );
 
 			$( document ).on( 'click', function( event ) {
-				if ( self.isSortOpen() && ! $( event.target ).closest( '.fmm-sort' ).length ) {
+				if ( self.isSortOpen() && ! $( event.target ).closest( '.migud-mm-sort' ).length ) {
 					self.closeSort( false );
 				}
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-menu-toggle', function() {
+			this.$el.on( 'click', '.migud-mm-folder-menu-toggle', function() {
 				var id = rowValue( this );
 				var menu;
 				self.closeSort( false );
@@ -834,35 +890,35 @@
 				self.render();
 				self.focusKey( 'menu-' + id );
 				// The list scrolls inside the rail: keep a menu on the last rows in view.
-				menu = self.menuOpen ? document.getElementById( 'fmm-folder-menu-' + id ) : null;
+				menu = self.menuOpen ? document.getElementById( 'migud-mm-folder-menu-' + id ) : null;
 				if ( menu ) {
 					menu.scrollIntoView( { block: 'nearest' } );
 				}
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-moveto', function() {
+			this.$el.on( 'click', '.migud-mm-folder-moveto', function() {
 				var id = rowValue( this );
 				self.menuOpen = null;
 				self.render();
 				self.openMoveDialog( id );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-color', function() {
+			this.$el.on( 'click', '.migud-mm-folder-color', function() {
 				var id = rowValue( this );
 				self.menuOpen = null;
 				self.render();
 				self.openAppearanceDialog( id );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-up, .fmm-folder-down', function() {
-				self.move( rowValue( this ), $( this ).hasClass( 'fmm-folder-up' ) ? -1 : 1 );
+			this.$el.on( 'click', '.migud-mm-folder-up, .migud-mm-folder-down', function() {
+				self.move( rowValue( this ), $( this ).hasClass( 'migud-mm-folder-up' ) ? -1 : 1 );
 			} );
 
-			this.$el.on( 'keydown', '.fmm-sidebar__item', function( event ) {
+			this.$el.on( 'keydown', '.migud-mm-sidebar__item', function( event ) {
 				var id = rowValue( this );
 				var $items, index;
 
-				if ( self.menuOpen !== id || ! $( event.target ).closest( '.fmm-menu, .fmm-folder-menu-toggle' ).length ) {
+				if ( self.menuOpen !== id || ! $( event.target ).closest( '.migud-mm-menu, .migud-mm-folder-menu-toggle' ).length ) {
 					return;
 				}
 
@@ -873,7 +929,7 @@
 					return;
 				}
 
-				$items = $( this ).find( '.fmm-menu__item' );
+				$items = $( this ).find( '.migud-mm-menu__item' );
 				index = $items.index( event.target );
 				if ( ! $items.length || ( index < 0 && 'ArrowDown' !== event.key ) ) {
 					return;
@@ -893,12 +949,12 @@
 				$items.eq( index ).trigger( 'focus' );
 			} );
 
-			this.$el.on( 'focusout', '.fmm-sidebar__item', function() {
+			this.$el.on( 'focusout', '.migud-mm-sidebar__item', function() {
 				var id = rowValue( this );
 
 				setTimeout( function() {
 					var active = document.activeElement;
-					var $row = self.$el.find( '.fmm-sidebar__item[data-folder="' + id + '"]' );
+					var $row = self.$el.find( '.migud-mm-sidebar__item[data-folder="' + id + '"]' );
 
 					// Focus on <body> is a click on empty space, handled by the click listener.
 					if ( self.menuOpen === id && active && active !== document.body && $row.length && ! $.contains( $row[ 0 ], active ) ) {
@@ -912,7 +968,7 @@
 			 * their buttons (and lose them again); see needsActions().
 			 */
 			this.$el.on( 'mouseover', function( event ) {
-				var li = self.lazy ? event.target.closest( '.fmm-sidebar__item--folder' ) : null;
+				var li = self.lazy ? event.target.closest( '.migud-mm-sidebar__item--folder' ) : null;
 				self.setHover( li ? li.getAttribute( 'data-folder' ) : null );
 			} );
 
@@ -932,11 +988,11 @@
 			} );
 
 			// Shift+Tab out of a row lands on the previous row's menu button: create it before the browser moves focus.
-			this.$el.on( 'keydown', '.fmm-sidebar__item--folder', function( event ) {
-				var first = this.querySelector( '.fmm-folder-toggle:not(:disabled)' ) || this.querySelector( '.fmm-folder' );
+			this.$el.on( 'keydown', '.migud-mm-sidebar__item--folder', function( event ) {
+				var first = this.querySelector( '.migud-mm-folder-toggle:not(:disabled)' ) || this.querySelector( '.migud-mm-folder' );
 				var prev = this.previousElementSibling;
 
-				if ( 'Tab' !== event.key || ! event.shiftKey || ! self.lazy || event.target !== first || ! prev || ! prev.classList.contains( 'fmm-sidebar__item--folder' ) ) {
+				if ( 'Tab' !== event.key || ! event.shiftKey || ! self.lazy || event.target !== first || ! prev || ! prev.classList.contains( 'migud-mm-sidebar__item--folder' ) ) {
 					return;
 				}
 				self.prepare( prev.getAttribute( 'data-folder' ) );
@@ -961,34 +1017,34 @@
 			document.addEventListener( moveEvent, onMove, { passive: true } );
 
 			$( document ).on( 'click', function( event ) {
-				if ( self.menuOpen && ! $( event.target ).closest( '.fmm-menu, .fmm-folder-menu-toggle' ).length ) {
+				if ( self.menuOpen && ! $( event.target ).closest( '.migud-mm-menu, .migud-mm-folder-menu-toggle' ).length ) {
 					self.closeMenu();
 				}
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-rename', function() {
+			this.$el.on( 'click', '.migud-mm-folder-rename', function() {
 				self.startEdit( rowValue( this ) );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-lock, .fmm-folder-unlock', function() {
-				self.setLocked( rowValue( this ), $( this ).hasClass( 'fmm-folder-lock' ) );
+			this.$el.on( 'click', '.migud-mm-folder-lock, .migud-mm-folder-unlock', function() {
+				self.setLocked( rowValue( this ), $( this ).hasClass( 'migud-mm-folder-lock' ) );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-delete', function() {
+			this.$el.on( 'click', '.migud-mm-folder-delete', function() {
 				self.remove( rowValue( this ) );
 			} );
 
-			this.$el.on( 'click', '.fmm-folder-add, .fmm-folder-remove, .fmm-folder-move', function() {
+			this.$el.on( 'click', '.migud-mm-folder-add, .migud-mm-folder-remove, .migud-mm-folder-move', function() {
 				var $button = $( this );
-				var mode = $button.hasClass( 'fmm-folder-move' ) ? 'move' : 'add';
-				self.assign( self.selectedIds(), rowValue( this ), $button.hasClass( 'fmm-folder-remove' ) ? 'remove' : mode );
+				var mode = $button.hasClass( 'migud-mm-folder-move' ) ? 'move' : 'add';
+				self.assign( self.selectedIds(), rowValue( this ), $button.hasClass( 'migud-mm-folder-remove' ) ? 'remove' : mode );
 			} );
 
 			this.$el.on( 'click', '.notice-dismiss', function() {
 				self.notice( '' );
 			} );
 
-			this.$el.on( 'click', '.fmm-sidebar__help', function() {
+			this.$el.on( 'click', '.migud-mm-sidebar__help', function() {
 				self.openHelp();
 			} );
 
@@ -996,16 +1052,16 @@
 				self.shortcut( event );
 			} );
 
-			this.$el.on( 'submit', '.fmm-form', function( event ) {
+			this.$el.on( 'submit', '.migud-mm-form', function( event ) {
 				event.preventDefault();
 				self.save( $( this ).find( 'input' ).val() );
 			} );
 
-			this.$el.on( 'click', '.fmm-form-cancel', function() {
+			this.$el.on( 'click', '.migud-mm-form-cancel', function() {
 				self.stopEdit();
 			} );
 
-			this.$el.on( 'keydown', '.fmm-form input', function( event ) {
+			this.$el.on( 'keydown', '.migud-mm-form input', function( event ) {
 				if ( 'Escape' === event.key ) {
 					event.preventDefault();
 					event.stopPropagation();
@@ -1062,7 +1118,7 @@
 					return;
 				}
 				event.stopPropagation();
-				row = $( event.target ).closest( '.fmm-sidebar__item--droppable' );
+				row = $( event.target ).closest( '.migud-mm-sidebar__item--droppable' );
 				if ( row.length ) {
 					event.preventDefault();
 					event.dataTransfer.dropEffect = 'move' === self.dropMode( event, rowValue( row ) ) ? 'move' : 'copy';
@@ -1082,14 +1138,14 @@
 				}
 				event.stopPropagation();
 				event.preventDefault();
-				row = $( event.target ).closest( '.fmm-sidebar__item--droppable' );
+				row = $( event.target ).closest( '.migud-mm-sidebar__item--droppable' );
 				self.endDrag();
 				if ( row.length ) {
 					self.assign( ids, rowValue( row ), self.dropMode( event, rowValue( row ) ) );
 				}
 			}
 
-			this.$el.on( 'dragstart', '.fmm-folder[draggable="true"]', function( event ) {
+			this.$el.on( 'dragstart', '.migud-mm-folder[draggable="true"]', function( event ) {
 				var dt = event.originalEvent && event.originalEvent.dataTransfer;
 				var id = rowValue( this );
 
@@ -1118,7 +1174,7 @@
 				return;
 			}
 			/* translators: %d: number of media files. */
-			ghost = $( '<div class="fmm fmm-drag-ghost"></div>' ).text( sprintf( _n( '%d media file', '%d media files', count, 'fena-media-manager' ), count ) ).appendTo( document.body );
+			ghost = $( '<div class="migud-mm migud-mm-drag-ghost"></div>' ).text( sprintf( _n( '%d media file', '%d media files', count, 'migud-media-manager' ), count ) ).appendTo( document.body );
 			dt.setDragImage( ghost[ 0 ], 12, 12 );
 			setTimeout( function() {
 				ghost.remove();
@@ -1164,7 +1220,7 @@
 		},
 
 		folderDropTarget: function( event ) {
-			var $row = $( event.target ).closest( '.fmm-sidebar__item--folder' );
+			var $row = $( event.target ).closest( '.migud-mm-sidebar__item--folder' );
 			var dragged = this.node( this.dragFolder );
 			var target, rect, ratio, position, level, parent, info, ids;
 
@@ -1182,7 +1238,7 @@
 			position = ratio < 0.3 ? 'before' : ( ratio > 0.7 ? 'after' : 'into' );
 
 			// Below an expanded parent the line would mean "after its whole subtree": that edge drops into the folder instead.
-			if ( 'after' === position && $row.find( '.fmm-folder-toggle[aria-expanded="true"]' ).length ) {
+			if ( 'after' === position && $row.find( '.migud-mm-folder-toggle[aria-expanded="true"]' ).length ) {
 				position = 'into';
 			}
 
@@ -1288,15 +1344,15 @@
 
 				return _.isEqual( ids, info.ids ) ? null : store.reorder( info.parent, ids );
 			} ).catch( function( error ) {
-				if ( error && 'fmm_folder_exists' === error.code ) {
+				if ( error && 'migud_mm_folder_exists' === error.code ) {
 					self.notice( destination ?
 						/* translators: 1: folder name, 2: destination folder name. */
-						sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Use “Move to…” to move and rename it.', 'fena-media-manager' ), folder.name, destination.name ) :
+						sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Use “Move to…” to move and rename it.', 'migud-media-manager' ), folder.name, destination.name ) :
 						/* translators: %s: folder name. */
-						sprintf( __( 'A folder named “%s” already exists at the top level. Use “Move to…” to move and rename it.', 'fena-media-manager' ), folder.name ), 'error' );
+						sprintf( __( 'A folder named “%s” already exists at the top level. Use “Move to…” to move and rename it.', 'migud-media-manager' ), folder.name ), 'error' );
 					return;
 				}
-				self.fail( error, __( 'The folder could not be moved.', 'fena-media-manager' ) );
+				self.fail( error, __( 'The folder could not be moved.', 'migud-media-manager' ) );
 			} );
 		},
 
@@ -1316,12 +1372,12 @@
 			}
 
 			this.moveFolder( id, target ).catch( function( error ) {
-				if ( error && 'fmm_folder_exists' === error.code ) {
+				if ( error && 'migud_mm_folder_exists' === error.code ) {
 					/* translators: 1: folder name, 2: destination folder name. */
-					self.notice( sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Use “Move to…” to move and rename it.', 'fena-media-manager' ), folder.name, destination.name ), 'error' );
+					self.notice( sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Use “Move to…” to move and rename it.', 'migud-media-manager' ), folder.name, destination.name ), 'error' );
 					return;
 				}
-				self.fail( error, __( 'The folder could not be moved.', 'fena-media-manager' ) );
+				self.fail( error, __( 'The folder could not be moved.', 'migud-media-manager' ) );
 			} );
 		},
 
@@ -1343,16 +1399,16 @@
 			}
 
 			this.busy = true;
-			return wp.apiFetch( { path: '/fmm/v1/folders/' + id, method: 'PATCH', data: data } ).then( function( folder ) {
+			return wp.apiFetch( { path: '/migud-mm/v1/folders/' + id, method: 'PATCH', data: data } ).then( function( folder ) {
 				var destination = store.get( target );
 
 				self.busy = false;
 				self.expandTo( target );
 				self.notice( destination ?
 					/* translators: 1: folder name, 2: destination folder name. */
-					sprintf( __( 'Moved “%1$s” to “%2$s”.', 'fena-media-manager' ), folder.name, destination.name ) :
+					sprintf( __( 'Moved “%1$s” to “%2$s”.', 'migud-media-manager' ), folder.name, destination.name ) :
 					/* translators: %s: folder name. */
-					sprintf( __( 'Moved “%s” to top level.', 'fena-media-manager' ), folder.name ), 'success' );
+					sprintf( __( 'Moved “%s” to top level.', 'migud-media-manager' ), folder.name ), 'success' );
 
 				return store.refresh().then( function() {
 					self.focusKey( 'folder-' + id );
@@ -1387,7 +1443,7 @@
 		 * @param {jQuery}   options.body             Body content.
 		 * @param {string}   options.submit           Primary button label.
 		 * @param {Function} options.onSubmit         Called with the dialog API on submit.
-		 * @param {string}   [options.focus]          data-fmm-key to focus after closing.
+		 * @param {string}   [options.focus]          data-migud-mm-key to focus after closing.
 		 * @param {string}   [options.icon]           ICONS key shown in a round badge before the title.
 		 * @param {boolean}  [options.describe]       Whether the body describes the dialog (aria-describedby).
 		 * @param {string}   [options.initialFocus]   'cancel' to focus Cancel when opened.
@@ -1398,13 +1454,13 @@
 		 */
 		dialog: function( options ) {
 			var self = this;
-			var titleId = 'fmm-dialog-title';
-			var bodyId = 'fmm-dialog-body';
-			var $dialog = $( '<dialog class="fmm fmm-dialog"></dialog>' ).addClass( options.className ).attr( 'aria-labelledby', titleId );
-			var $error = $( '<p class="fmm-dialog__error" role="alert" hidden></p>' );
-			var $submit = $( '<button type="submit" class="fmm-dialog__submit"></button>' ).text( options.submit );
-			var $cancel = $( '<button type="button" class="fmm-dialog__cancel"></button>' ).text( options.closeOnly ? __( 'Close', 'fena-media-manager' ) : __( 'Cancel', 'fena-media-manager' ) );
-			var $title = $( '<h2 class="fmm-dialog__title"></h2>' ).attr( 'id', titleId ).text( options.title );
+			var titleId = 'migud-mm-dialog-title';
+			var bodyId = 'migud-mm-dialog-body';
+			var $dialog = $( '<dialog class="migud-mm migud-mm-dialog"></dialog>' ).addClass( options.className ).attr( 'aria-labelledby', titleId );
+			var $error = $( '<p class="migud-mm-dialog__error" role="alert" hidden></p>' );
+			var $submit = $( '<button type="submit" class="migud-mm-dialog__submit"></button>' ).text( options.submit );
+			var $cancel = $( '<button type="button" class="migud-mm-dialog__cancel"></button>' ).text( options.closeOnly ? __( 'Close', 'migud-media-manager' ) : __( 'Cancel', 'migud-media-manager' ) );
+			var $title = $( '<h2 class="migud-mm-dialog__title"></h2>' ).attr( 'id', titleId ).text( options.title );
 			var api = {
 				$error: $error,
 				close: function() {
@@ -1424,15 +1480,15 @@
 			}
 
 			$dialog.append(
-				$( '<form method="dialog" class="fmm-dialog__form"></form>' ).append(
+				$( '<form method="dialog" class="migud-mm-dialog__form"></form>' ).append(
 					options.icon ?
-						$( '<div class="fmm-dialog__header"></div>' ).append(
-							$( '<span class="fmm-dialog__badge" aria-hidden="true"></span>' ).addClass( 'fmm-dialog__badge--' + options.icon ).append( icon( options.icon ) ),
+						$( '<div class="migud-mm-dialog__header"></div>' ).append(
+							$( '<span class="migud-mm-dialog__badge" aria-hidden="true"></span>' ).addClass( 'migud-mm-dialog__badge--' + options.icon ).append( icon( options.icon ) ),
 							$title
 						) : $title,
-					$( '<div class="fmm-dialog__body"></div>' ).attr( 'id', options.describe ? bodyId : null ).append( options.body ),
+					$( '<div class="migud-mm-dialog__body"></div>' ).attr( 'id', options.describe ? bodyId : null ).append( options.body ),
 					$error,
-					$( '<div class="fmm-dialog__footer"></div>' ).append( options.closeOnly ? $cancel : [ $cancel, $submit ] )
+					$( '<div class="migud-mm-dialog__footer"></div>' ).append( options.closeOnly ? $cancel : [ $cancel, $submit ] )
 				).on( 'submit', function( event ) {
 					event.preventDefault();
 					if ( options.onSubmit ) {
@@ -1470,12 +1526,12 @@
 			var current = folder ? folder.color || '' : '';
 			var custom = COLOR_HEX.test( current );
 			var options = [
-				{ value: 'gray', label: __( 'Gray (Default)', 'fena-media-manager' ) },
-				{ value: 'blue', label: __( 'Blue', 'fena-media-manager' ) },
-				{ value: 'violet', label: __( 'Violet', 'fena-media-manager' ) },
-				{ value: 'sand', label: __( 'Sand', 'fena-media-manager' ) },
-				{ value: 'green', label: __( 'Green', 'fena-media-manager' ) },
-				{ value: 'custom', label: __( 'Custom', 'fena-media-manager' ) }
+				{ value: 'gray', label: __( 'Gray (Default)', 'migud-media-manager' ) },
+				{ value: 'blue', label: __( 'Blue', 'migud-media-manager' ) },
+				{ value: 'violet', label: __( 'Violet', 'migud-media-manager' ) },
+				{ value: 'sand', label: __( 'Sand', 'migud-media-manager' ) },
+				{ value: 'green', label: __( 'Green', 'migud-media-manager' ) },
+				{ value: 'custom', label: __( 'Custom', 'migud-media-manager' ) }
 			];
 			var selected = custom ? 'custom' : ( current || 'gray' );
 			var startHex = custom ? current : DEFAULT_CUSTOM_COLOR;
@@ -1487,16 +1543,16 @@
 				return;
 			}
 
-			$picker = $( '<input type="color" id="fmm-color-custom" />' ).val( startHex );
-			$hex = $( '<input type="text" id="fmm-color-hex" maxlength="7" spellcheck="false" autocomplete="off" />' ).attr( 'placeholder', DEFAULT_CUSTOM_COLOR ).val( startHex );
-			$caption = $( '<span class="fmm-appearance__caption"></span>' );
-			$previewIcon = $( iconEl( 'folder' ) ).addClass( 'fmm-appearance__icon' );
-			$preview = $( '<div class="fmm-appearance__preview"></div>' ).append(
+			$picker = $( '<input type="color" id="migud-mm-color-custom" />' ).val( startHex );
+			$hex = $( '<input type="text" id="migud-mm-color-hex" maxlength="7" spellcheck="false" autocomplete="off" />' ).attr( 'placeholder', DEFAULT_CUSTOM_COLOR ).val( startHex );
+			$caption = $( '<span class="migud-mm-appearance__caption"></span>' );
+			$previewIcon = $( iconEl( 'folder' ) ).addClass( 'migud-mm-appearance__icon' );
+			$preview = $( '<div class="migud-mm-appearance__preview"></div>' ).append(
 				$previewIcon,
-				$( '<span class="fmm-appearance__name"></span>' ).text( folder.name ),
+				$( '<span class="migud-mm-appearance__name"></span>' ).text( folder.name ),
 				$caption
 			);
-			$fieldset = $( '<fieldset class="fmm-appearance__section"></fieldset>' ).append( $( '<legend></legend>' ).text( __( 'Color', 'fena-media-manager' ) ) );
+			$fieldset = $( '<fieldset class="migud-mm-appearance__section"></fieldset>' ).append( $( '<legend></legend>' ).text( __( 'Color', 'migud-media-manager' ) ) );
 
 			function hexFrom( raw ) {
 				var value = $.trim( raw ).toLowerCase();
@@ -1510,20 +1566,20 @@
 					var v = parseInt( hex.slice( k, k + 2 ), 16 ) / 255;
 					return v <= 0.03928 ? v / 12.92 : Math.pow( ( v + 0.055 ) / 1.055, 2.4 );
 				} );
-				return 0.2126 * c[ 0 ] + 0.7152 * c[ 1 ] + 0.0722 * c[ 2 ] > 0.5 ? 'var(--fmm-text)' : 'var(--fmm-on-primary)';
+				return 0.2126 * c[ 0 ] + 0.7152 * c[ 1 ] + 0.0722 * c[ 2 ] > 0.5 ? 'var(--migud-mm-text)' : 'var(--migud-mm-on-primary)';
 			}
 
 			function choice() {
-				return $fieldset.find( 'input[name="fmm-color"]:checked' ).val();
+				return $fieldset.find( 'input[name="migud-mm-color"]:checked' ).val();
 			}
 
 			function iconChoice() {
-				return $iconSet.find( 'input[name="fmm-icon"]:checked' ).val();
+				return $iconSet.find( 'input[name="migud-mm-icon"]:checked' ).val();
 			}
 
 			function showCustom( hex ) {
-				$customSwatch[ 0 ].style.setProperty( '--fmm-folder-color', hex );
-				$customSwatch[ 0 ].style.setProperty( '--fmm-check', checkColor( hex ) );
+				$customSwatch[ 0 ].style.setProperty( '--migud-mm-folder-color', hex );
+				$customSwatch[ 0 ].style.setProperty( '--migud-mm-check', checkColor( hex ) );
 			}
 
 			function refresh() {
@@ -1533,58 +1589,58 @@
 				var caption;
 
 				$customRow.prop( 'hidden', 'custom' !== value );
-				$preview.attr( 'data-fmm-color', 'custom' === value ? null : value );
+				$preview.attr( 'data-migud-mm-color', 'custom' === value ? null : value );
 				if ( 'custom' === value ) {
-					$preview[ 0 ].style.setProperty( '--fmm-folder-color', hex );
+					$preview[ 0 ].style.setProperty( '--migud-mm-folder-color', hex );
 					/* translators: %s: color as a hex value, e.g. #7b61c9. */
-					caption = sprintf( __( 'Custom · %s', 'fena-media-manager' ), hex );
+					caption = sprintf( __( 'Custom · %s', 'migud-media-manager' ), hex );
 				} else {
-					$preview[ 0 ].style.removeProperty( '--fmm-folder-color' );
+					$preview[ 0 ].style.removeProperty( '--migud-mm-folder-color' );
 					caption = _.findWhere( options, { value: value } ).label;
 				}
 				$caption.text( glyph ? caption + ' · ' + iconNames[ glyph ] : caption );
-				$preview.find( '.fmm-folder__glyph' ).remove();
+				$preview.find( '.migud-mm-folder__glyph' ).remove();
 				if ( glyph ) {
-					$previewIcon.after( $( glyphEl( glyph ) ).addClass( 'fmm-appearance__glyph' ) );
+					$previewIcon.after( $( glyphEl( glyph ) ).addClass( 'migud-mm-appearance__glyph' ) );
 				}
 			}
 
 			_.each( options, function( option ) {
-				var $swatch = $( '<span class="fmm-swatch" aria-hidden="true"></span>' ).attr( 'data-fmm-color', 'custom' === option.value ? null : option.value ).append( iconEl( 'check' ) );
-				var $label = $( '<label class="fmm-swatch-option"></label>' ).attr( 'title', option.label ).append(
-					$( '<input type="radio" name="fmm-color" />' ).val( option.value ).prop( 'checked', option.value === selected ),
+				var $swatch = $( '<span class="migud-mm-swatch" aria-hidden="true"></span>' ).attr( 'data-migud-mm-color', 'custom' === option.value ? null : option.value ).append( iconEl( 'check' ) );
+				var $label = $( '<label class="migud-mm-swatch-option"></label>' ).attr( 'title', option.label ).append(
+					$( '<input type="radio" name="migud-mm-color" />' ).val( option.value ).prop( 'checked', option.value === selected ),
 					$swatch,
 					$( '<span class="screen-reader-text"></span>' ).text( option.label )
 				);
 
 				if ( 'custom' === option.value ) {
 					$customSwatch = $swatch;
-					$label.addClass( 'fmm-swatch-option--custom' );
+					$label.addClass( 'migud-mm-swatch-option--custom' );
 					showCustom( startHex );
 				}
 				$fieldset.append( $label );
 			} );
 
-			$iconSet = $( '<fieldset class="fmm-appearance__section fmm-appearance__icons"></fieldset>' ).append( $( '<legend></legend>' ).text( __( 'Icon', 'fena-media-manager' ) ) );
+			$iconSet = $( '<fieldset class="migud-mm-appearance__section migud-mm-appearance__icons"></fieldset>' ).append( $( '<legend></legend>' ).text( __( 'Icon', 'migud-media-manager' ) ) );
 			_.each( [ '' ].concat( FOLDER_ICONS ), function( key ) {
-				$iconSet.append( $( '<label class="fmm-icon-option"></label>' ).attr( 'title', iconNames[ key ] ).append(
-					$( '<input type="radio" name="fmm-icon" />' ).val( key ).prop( 'checked', key === currentIcon ),
-					$( '<span class="fmm-icon-tile" aria-hidden="true"></span>' ).append( key ? glyphIconEl( key ) : iconEl( 'folder' ) ),
+				$iconSet.append( $( '<label class="migud-mm-icon-option"></label>' ).attr( 'title', iconNames[ key ] ).append(
+					$( '<input type="radio" name="migud-mm-icon" />' ).val( key ).prop( 'checked', key === currentIcon ),
+					$( '<span class="migud-mm-icon-tile" aria-hidden="true"></span>' ).append( key ? glyphIconEl( key ) : iconEl( 'folder' ) ),
 					$( '<span class="screen-reader-text"></span>' ).text( iconNames[ key ] )
 				) );
 			} );
-			$iconSet.on( 'change', 'input[name="fmm-icon"]', refresh );
+			$iconSet.on( 'change', 'input[name="migud-mm-icon"]', refresh );
 
-			$customRow = $( '<div class="fmm-appearance__custom"></div>' ).prop( 'hidden', 'custom' !== selected ).append(
-				$( '<label class="screen-reader-text" for="fmm-color-custom"></label>' ).text( __( 'Custom color', 'fena-media-manager' ) ),
+			$customRow = $( '<div class="migud-mm-appearance__custom"></div>' ).prop( 'hidden', 'custom' !== selected ).append(
+				$( '<label class="screen-reader-text" for="migud-mm-color-custom"></label>' ).text( __( 'Custom color', 'migud-media-manager' ) ),
 				$picker,
-				$( '<div class="fmm-dialog__field fmm-appearance__hex"></div>' ).append(
-					$( '<label for="fmm-color-hex"></label>' ).text( __( 'Hex', 'fena-media-manager' ) ),
+				$( '<div class="migud-mm-dialog__field migud-mm-appearance__hex"></div>' ).append(
+					$( '<label for="migud-mm-color-hex"></label>' ).text( __( 'Hex', 'migud-media-manager' ) ),
 					$hex
 				)
 			);
 
-			$fieldset.on( 'change', 'input[name="fmm-color"]', refresh );
+			$fieldset.on( 'change', 'input[name="migud-mm-color"]', refresh );
 			$picker.on( 'input change', function() {
 				var hex = String( $picker.val() ).toLowerCase();
 
@@ -1604,13 +1660,13 @@
 				refresh();
 			} );
 
-			$body = $( '<div class="fmm-appearance"></div>' ).append( $preview, $fieldset, $customRow, $iconSet );
+			$body = $( '<div class="migud-mm-appearance"></div>' ).append( $preview, $fieldset, $customRow, $iconSet );
 			refresh();
 
 			this.dialog( {
 				/* translators: %s: folder name. */
-				title: sprintf( __( 'Appearance of folder “%s”', 'fena-media-manager' ), folder.name ),
-				submit: __( 'Save', 'fena-media-manager' ),
+				title: sprintf( __( 'Appearance of folder “%s”', 'migud-media-manager' ), folder.name ),
+				submit: __( 'Save', 'migud-media-manager' ),
 				focus: 'folder-' + id,
 				body: $body,
 				onSubmit: function( api ) {
@@ -1621,7 +1677,7 @@
 					var data = {};
 
 					if ( 'custom' === picked && ! hex ) {
-						api.error( __( 'Enter a color as a hex value, e.g. #7b61c9.', 'fena-media-manager' ) );
+						api.error( __( 'Enter a color as a hex value, e.g. #7b61c9.', 'migud-media-manager' ) );
 						$hex.trigger( 'focus' );
 						return;
 					}
@@ -1642,13 +1698,13 @@
 					self.busy = true;
 					api.error( '' );
 					api.busy( true );
-					wp.apiFetch( { path: '/fmm/v1/folders/' + id, method: 'PATCH', data: data } ).then( function() {
+					wp.apiFetch( { path: '/migud-mm/v1/folders/' + id, method: 'PATCH', data: data } ).then( function() {
 						self.busy = false;
 						self.notice( _.has( data, 'icon' ) ?
 							/* translators: %s: folder name. */
-							sprintf( __( 'Appearance of folder “%s” changed.', 'fena-media-manager' ), folder.name ) :
+							sprintf( __( 'Appearance of folder “%s” changed.', 'migud-media-manager' ), folder.name ) :
 							/* translators: %s: folder name. */
-							sprintf( __( 'Color of folder “%s” changed.', 'fena-media-manager' ), folder.name ), 'success' );
+							sprintf( __( 'Color of folder “%s” changed.', 'migud-media-manager' ), folder.name ), 'success' );
 						api.close();
 						return store.refresh().then( function() {
 							self.focusKey( 'folder-' + id );
@@ -1656,21 +1712,21 @@
 					}, function( error ) {
 						self.busy = false;
 						api.busy( false );
-						api.error( ( error && error.message ) || __( 'The appearance could not be saved.', 'fena-media-manager' ) );
+						api.error( ( error && error.message ) || __( 'The appearance could not be saved.', 'migud-media-manager' ) );
 					} );
 				}
 			} );
-			$fieldset.find( 'input[name="fmm-color"]:checked' ).trigger( 'focus' );
+			$fieldset.find( 'input[name="migud-mm-color"]:checked' ).trigger( 'focus' );
 		},
 
 		/**
-		 * Folder dropdown of the move dialog (see fmm-picker.js).
+		 * Folder dropdown of the move dialog (see migud-mm-picker.js).
 		 *
-		 * @param {Object} config See fmmPicker.create(); options { value, label, depth, color, icon, path }.
+		 * @param {Object} config See migudMMPicker.create(); options { value, label, depth, color, icon, path }.
 		 * @return {Object} { $el, value(), focus() }.
 		 */
 		folderPicker: function( config ) {
-			return window.fmmPicker.create( _.extend( {}, config, {
+			return window.migudMMPicker.create( _.extend( {}, config, {
 				options: _.map( config.options, function( option ) {
 					return _.extend( { plain: '0' === option.value }, option );
 				} )
@@ -1693,7 +1749,7 @@
 			}
 
 			current = this.parentOf( node );
-			pickerOptions = [ { value: '0', label: __( 'Top level', 'fena-media-manager' ), depth: 0, color: '', path: '' } ];
+			pickerOptions = [ { value: '0', label: __( 'Top level', 'migud-media-manager' ), depth: 0, color: '', path: '' } ];
 			_.each( store.tree(), function( other ) {
 				if ( String( other.folder.id ) !== id && ! _.contains( other.parents, id ) && ! other.protected ) {
 					pickerOptions.push( {
@@ -1709,28 +1765,28 @@
 				}
 			} );
 			picker = this.folderPicker( {
-				id: 'fmm-move-target',
-				labelId: 'fmm-move-target-label',
-				listId: 'fmm-move-listbox',
+				id: 'migud-mm-move-target',
+				labelId: 'migud-mm-move-target-label',
+				listId: 'migud-mm-move-listbox',
 				options: pickerOptions,
 				value: _.some( pickerOptions, { value: current } ) ? current : '0'
 			} );
 
-			$name = $( '<input type="text" id="fmm-move-name" maxlength="200" />' ).val( folder.name );
-			$nameField = $( '<div class="fmm-dialog__field" hidden></div>' ).append(
-				$( '<label for="fmm-move-name"></label>' ).text( __( 'New name', 'fena-media-manager' ) ),
+			$name = $( '<input type="text" id="migud-mm-move-name" maxlength="200" />' ).val( folder.name );
+			$nameField = $( '<div class="migud-mm-dialog__field" hidden></div>' ).append(
+				$( '<label for="migud-mm-move-name"></label>' ).text( __( 'New name', 'migud-media-manager' ) ),
 				$name
 			);
 
 			this.dialog( {
 				/* translators: %s: folder name. */
-				title: sprintf( __( 'Move folder “%s”', 'fena-media-manager' ), folder.name ),
-				submit: __( 'Move', 'fena-media-manager' ),
-				className: 'fmm-dialog--move',
+				title: sprintf( __( 'Move folder “%s”', 'migud-media-manager' ), folder.name ),
+				submit: __( 'Move', 'migud-media-manager' ),
+				className: 'migud-mm-dialog--move',
 				focus: 'folder-' + id,
 				body: [
-					$( '<div class="fmm-dialog__field"></div>' ).append(
-						$( '<label id="fmm-move-target-label"></label>' ).text( __( 'Destination', 'fena-media-manager' ) ).on( 'click', picker.focus ),
+					$( '<div class="migud-mm-dialog__field"></div>' ).append(
+						$( '<label id="migud-mm-move-target-label"></label>' ).text( __( 'Destination', 'migud-media-manager' ) ).on( 'click', picker.focus ),
 						picker.$el
 					),
 					$nameField
@@ -1755,17 +1811,17 @@
 						api.close();
 					}, function( error ) {
 						api.busy( false );
-						if ( error && 'fmm_folder_exists' === error.code ) {
+						if ( error && 'migud_mm_folder_exists' === error.code ) {
 							$nameField.prop( 'hidden', false );
 							api.error( destination ?
 								/* translators: 1: folder name, 2: destination folder name. */
-								sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Enter a different name to move it.', 'fena-media-manager' ), name || folder.name, destination.name ) :
+								sprintf( __( 'A folder named “%1$s” already exists in “%2$s”. Enter a different name to move it.', 'migud-media-manager' ), name || folder.name, destination.name ) :
 								/* translators: %s: folder name. */
-								sprintf( __( 'A folder named “%s” already exists at the top level. Enter a different name to move it.', 'fena-media-manager' ), name || folder.name ) );
+								sprintf( __( 'A folder named “%s” already exists at the top level. Enter a different name to move it.', 'migud-media-manager' ), name || folder.name ) );
 							$name.trigger( 'focus' ).trigger( 'select' );
 							return;
 						}
-						api.error( ( error && error.message ) || __( 'The folder could not be moved.', 'fena-media-manager' ) );
+						api.error( ( error && error.message ) || __( 'The folder could not be moved.', 'migud-media-manager' ) );
 					} );
 				}
 			} );
@@ -1815,7 +1871,7 @@
 
 				self.busy = false;
 				/* translators: 1: folder name, 2: new position, 3: number of folders on this level. */
-				wp.a11y.speak( sprintf( __( 'Folder “%1$s” moved to position %2$d of %3$d.', 'fena-media-manager' ), folder.name, _.indexOf( ids, id ) + 1, ids.length ), 'polite' );
+				wp.a11y.speak( sprintf( __( 'Folder “%1$s” moved to position %2$d of %3$d.', 'migud-media-manager' ), folder.name, _.indexOf( ids, id ) + 1, ids.length ), 'polite' );
 
 				if ( self.focusAfterMove === id ) {
 					self.focusAfterMove = null;
@@ -1823,7 +1879,7 @@
 				}
 				if ( action && self.menuOpen === id ) {
 					$focus = _.find( _.map( [ action + '-' + id, ( 'up' === action ? 'down-' : 'up-' ) + id, 'menu-' + id ], function( key ) {
-						return self.$el.find( '[data-fmm-key="' + key + '"]' );
+						return self.$el.find( '[data-migud-mm-key="' + key + '"]' );
 					} ), function( $candidate ) {
 						return $candidate.length;
 					} );
@@ -1832,20 +1888,20 @@
 					}
 				}
 			} ).catch( function( error ) {
-				if ( error && 'fmm_order_conflict' === error.code ) {
+				if ( error && 'migud_mm_order_conflict' === error.code ) {
 					self.busy = false;
 					self.notice( error.message, 'warning' );
 					store.refresh().catch( function() {} );
 					return;
 				}
-				self.fail( error, __( 'The folder order could not be saved.', 'fena-media-manager' ) );
+				self.fail( error, __( 'The folder order could not be saved.', 'migud-media-manager' ) );
 			} );
 		},
 
 		/**
 		 * Closes the actions menu.
 		 *
-		 * @param {string} [focus] data-fmm-key to focus afterwards.
+		 * @param {string} [focus] data-migud-mm-key to focus afterwards.
 		 */
 		closeMenu: function( focus ) {
 			this.menuOpen = null;
@@ -1896,7 +1952,7 @@
 			}
 
 			if ( node && node.depth ) {
-				li.style.setProperty( '--fmm-depth', node.depth );
+				li.style.setProperty( '--migud-mm-depth', node.depth );
 			}
 
 			if ( isFolder && String( this.editing ) === value ) {
@@ -1909,7 +1965,7 @@
 				if ( node && node.hasChildren ) {
 					li.appendChild( this.toggleButton( node.folder ) );
 				} else {
-					li.classList.add( 'fmm-sidebar__item--leaf' );
+					li.classList.add( 'migud-mm-sidebar__item--leaf' );
 				}
 			}
 
@@ -1920,15 +1976,15 @@
 				folder.insertBefore( glyphEl( glyph ), folder.firstChild.nextSibling );
 			}
 			if ( active && isFolder && 'folder' === iconName ) {
-				folder.firstChild.firstChild.setAttribute( 'href', '#fmm-i-folder-open' );
+				folder.firstChild.firstChild.setAttribute( 'href', '#migud-mm-i-folder-open' );
 			}
-			folder.setAttribute( 'data-fmm-key', 'folder-' + value );
+			folder.setAttribute( 'data-migud-mm-key', 'folder-' + value );
 			this.fillName( folder.childNodes[ glyph ? 2 : 1 ], name, isFolder );
 			if ( node && node.folder.locked ) {
 				lock = iconEl( 'lock' );
-				lock.setAttribute( 'class', lock.getAttribute( 'class' ) + ' fmm-folder__lock' );
+				lock.setAttribute( 'class', lock.getAttribute( 'class' ) + ' migud-mm-folder__lock' );
 				folder.insertBefore( lock, folder.lastChild );
-				folder.insertBefore( $( '<span class="screen-reader-text"></span>' ).text( __( 'Locked', 'fena-media-manager' ) )[ 0 ], folder.lastChild );
+				folder.insertBefore( $( '<span class="screen-reader-text"></span>' ).text( __( 'Locked', 'migud-media-manager' ) )[ 0 ], folder.lastChild );
 			}
 			countEl = folder.lastChild;
 			countEl.textContent = count;
@@ -1940,14 +1996,14 @@
 				folder.setAttribute( 'draggable', 'true' );
 			}
 			if ( node && _.contains( COLOR_PRESETS, node.folder.color ) ) {
-				folder.setAttribute( 'data-fmm-color', node.folder.color );
+				folder.setAttribute( 'data-migud-mm-color', node.folder.color );
 			} else if ( node && COLOR_HEX.test( node.folder.color || '' ) ) {
-				folder.style.setProperty( '--fmm-folder-color', node.folder.color );
+				folder.style.setProperty( '--migud-mm-folder-color', node.folder.color );
 			}
 			li.appendChild( folder );
 
 			if ( isFolder ) {
-				li.classList.add( 'fmm-sidebar__item--folder', 'fmm-sidebar__item--droppable' );
+				li.classList.add( 'migud-mm-sidebar__item--folder', 'migud-mm-sidebar__item--droppable' );
 				this.fillTrailing( li, value, name, ctx );
 			}
 
@@ -1980,14 +2036,14 @@
 				inFolder = ctx.counts[ String( Number( value ) ) ] || 0;
 				actions = templates().assign.cloneNode( false );
 				if ( inFolder < ctx.selected ) {
-					actions.appendChild( this.actionButton( 'fmm-folder-add', 'folder-plus', 'add-' + value, addLabel( ctx, name ) ) );
+					actions.appendChild( this.actionButton( 'migud-mm-folder-add', 'folder-plus', 'add-' + value, addLabel( ctx, name ) ) );
 				}
 				// "→" moves the selection out of the active folder into this one.
 				if ( ctx.source && ctx.source !== value ) {
-					actions.appendChild( this.actionButton( 'fmm-folder-move', 'folder-move', 'move-' + value, moveLabel( ctx, name ) ) );
+					actions.appendChild( this.actionButton( 'migud-mm-folder-move', 'folder-move', 'move-' + value, moveLabel( ctx, name ) ) );
 				}
 				if ( inFolder > 0 ) {
-					actions.appendChild( this.actionButton( 'fmm-folder-remove', 'folder-minus', 'remove-' + value, removeLabel( inFolder, name ) ) );
+					actions.appendChild( this.actionButton( 'migud-mm-folder-remove', 'folder-minus', 'remove-' + value, removeLabel( inFolder, name ) ) );
 				}
 				li.classList.add( 'has-assign' );
 				li.appendChild( actions );
@@ -2049,7 +2105,7 @@
 			var node = this.node( value );
 
 			if ( ! node || ! node.protected ) {
-				actions.appendChild( this.actionButton( 'fmm-folder-subfolder', 'subfolder', 'subfolder-' + value, sprintf( strings().subfolder, name ) ) );
+				actions.appendChild( this.actionButton( 'migud-mm-folder-subfolder', 'subfolder', 'subfolder-' + value, sprintf( strings().subfolder, name ) ) );
 			}
 			actions.appendChild( this.menuToggle( value, name ) );
 
@@ -2070,11 +2126,11 @@
 
 			li = this.rowOf( id );
 			folder = li && store.get( id );
-			if ( ! folder || ! li.classList.contains( 'fmm-sidebar__item--folder' ) || ! li.querySelector( '.fmm-folder' ) ) {
+			if ( ! folder || ! li.classList.contains( 'migud-mm-sidebar__item--folder' ) || ! li.querySelector( '.migud-mm-folder' ) ) {
 				return;
 			}
 
-			actions = li.querySelector( ':scope > .fmm-folder__actions' );
+			actions = li.querySelector( ':scope > .migud-mm-folder__actions' );
 			if ( this.needsActions( id ) ) {
 				if ( ! actions ) {
 					li.appendChild( this.buildActions( id, folder.name ) );
@@ -2095,7 +2151,7 @@
 		},
 
 		focusRowOf: function( el ) {
-			var li = el && el.closest ? el.closest( '.fmm-sidebar__item--folder' ) : null;
+			var li = el && el.closest ? el.closest( '.migud-mm-sidebar__item--folder' ) : null;
 			return li && this.$el[ 0 ].contains( li ) ? li.getAttribute( 'data-folder' ) : null;
 		},
 
@@ -2141,13 +2197,13 @@
 		 */
 		menuToggle: function( id, name ) {
 			var open = this.menuOpen === id;
-			var button = this.actionButton( 'fmm-folder-menu-toggle', 'more', 'menu-' + id, sprintf( strings().more, name ) );
+			var button = this.actionButton( 'migud-mm-folder-menu-toggle', 'more', 'menu-' + id, sprintf( strings().more, name ) );
 
-			button.id = 'fmm-folder-menu-toggle-' + id;
+			button.id = 'migud-mm-folder-menu-toggle-' + id;
 			button.setAttribute( 'aria-haspopup', 'menu' );
 			button.setAttribute( 'aria-expanded', String( open ) );
 			if ( open ) {
-				button.setAttribute( 'aria-controls', 'fmm-folder-menu-' + id );
+				button.setAttribute( 'aria-controls', 'migud-mm-folder-menu-' + id );
 			}
 
 			return button;
@@ -2159,9 +2215,9 @@
 		 * @return {jQuery} Control.
 		 */
 		helpControl: function() {
-			return $( '<div class="fmm-sort fmm-sort--help"></div>' ).append(
-				$( '<button type="button" class="fmm-sidebar__help" data-fmm-key="help" aria-haspopup="dialog"></button>' )
-					.attr( { 'aria-label': __( 'Keyboard shortcuts', 'fena-media-manager' ), title: __( 'Keyboard shortcuts', 'fena-media-manager' ) } ).append( icon( 'help' ) )
+			return $( '<div class="migud-mm-sort migud-mm-sort--help"></div>' ).append(
+				$( '<button type="button" class="migud-mm-sidebar__help" data-migud-mm-key="help" aria-haspopup="dialog"></button>' )
+					.attr( { 'aria-label': __( 'Keyboard shortcuts', 'migud-media-manager' ), title: __( 'Keyboard shortcuts', 'migud-media-manager' ) } ).append( icon( 'help' ) )
 			);
 		},
 
@@ -2193,10 +2249,10 @@
 			this.slideToken = 0;
 			this.slideTimer = 0;
 			this.phoneMq = window.matchMedia ? window.matchMedia( PHONE_QUERY ) : null;
-			this.$collapseBtn = this.$el.find( '.fmm-panel-toggle' );
-			this.$openBtn = $( '<button type="button" class="fmm fmm-panel-open" data-fmm-key="expand-panel" aria-expanded="false"></button>' )
-				.attr( { 'aria-controls': RAIL_ID, 'aria-label': __( 'Expand folders panel', 'fena-media-manager' ), title: __( 'Expand folders panel', 'fena-media-manager' ) } ).append( icon( 'panel-open' ) );
-			this.$backdrop = $( '<div class="fmm-layout__backdrop" aria-hidden="true"></div>' );
+			this.$collapseBtn = this.$el.find( '.migud-mm-panel-toggle' );
+			this.$openBtn = $( '<button type="button" class="migud-mm migud-mm-panel-open" data-migud-mm-key="expand-panel" aria-expanded="false"></button>' )
+				.attr( { 'aria-controls': RAIL_ID, 'aria-label': __( 'Expand folders panel', 'migud-media-manager' ), title: __( 'Expand folders panel', 'migud-media-manager' ) } ).append( icon( 'panel-open' ) );
+			this.$backdrop = $( '<div class="migud-mm-layout__backdrop" aria-hidden="true"></div>' );
 			$layout.prepend( this.$openBtn ).append( this.$backdrop );
 
 			this.$collapseBtn.on( 'click', function() {
@@ -2212,7 +2268,7 @@
 			// Escape closes the drawer, unless it belongs to a menu, field, dialog or inline editing.
 			$( document ).on( 'keydown', function( event ) {
 				if ( 'Escape' !== event.key || ! self.drawerOpen || ! self.isPhone() || event.defaultPrevented || document.querySelector( 'dialog[open]' ) ||
-					self.isSortOpen() || self.menuOpen || null !== self.editing || $( event.target ).closest( 'input, textarea, select, [contenteditable], .fmm-menu, .fmm-sort__menu, .fmm-picker' ).length ) {
+					self.isSortOpen() || self.menuOpen || null !== self.editing || $( event.target ).closest( 'input, textarea, select, [contenteditable], .migud-mm-menu, .migud-mm-sort__menu, .migud-mm-picker' ).length ) {
 					return;
 				}
 				event.preventDefault();
@@ -2252,11 +2308,11 @@
 				return setTimeout( cb, 16 );
 			};
 
-			$layout.addClass( 'fmm-layout--instant' );
+			$layout.addClass( 'migud-mm-layout--instant' );
 			fn();
 			frame( function() {
 				frame( function() {
-					$layout.removeClass( 'fmm-layout--instant' );
+					$layout.removeClass( 'migud-mm-layout--instant' );
 				} );
 			} );
 		},
@@ -2267,7 +2323,7 @@
 		 * @return {number} Milliseconds.
 		 */
 		panelDuration: function() {
-			var raw = $.trim( window.getComputedStyle( this.$layout[ 0 ] ).getPropertyValue( '--fmm-panel-duration' ) );
+			var raw = $.trim( window.getComputedStyle( this.$layout[ 0 ] ).getPropertyValue( '--migud-mm-panel-duration' ) );
 			var value = parseFloat( raw );
 
 			if ( isNaN( value ) ) {
@@ -2295,18 +2351,18 @@
 				}
 				finished = true;
 				clearTimeout( self.slideTimer );
-				$layout.off( 'transitionend.fmmslide' ).removeClass( 'fmm-layout--animating' );
+				$layout.off( 'transitionend.migudmmslide' ).removeClass( 'migud-mm-layout--animating' );
 				done();
 			};
 
 			clearTimeout( this.slideTimer );
-			$layout.off( 'transitionend.fmmslide' );
+			$layout.off( 'transitionend.migudmmslide' );
 			if ( ! duration ) {
-				$layout.removeClass( 'fmm-layout--animating' );
+				$layout.removeClass( 'migud-mm-layout--animating' );
 				done();
 				return;
 			}
-			$layout.addClass( 'fmm-layout--animating' ).on( 'transitionend.fmmslide', function( event ) {
+			$layout.addClass( 'migud-mm-layout--animating' ).on( 'transitionend.migudmmslide', function( event ) {
 				var original = event.originalEvent;
 
 				if ( original && original.target === $layout[ 0 ] && /padding/.test( original.propertyName ) ) {
@@ -2356,12 +2412,12 @@
 			var shown = phone ? this.drawerOpen : ! this.collapsed;
 			var locked = phone && this.drawerOpen;
 
-			this.$layout.toggleClass( 'fmm-layout--collapsed', this.collapsed ).toggleClass( 'fmm-layout--drawer-open', locked );
+			this.$layout.toggleClass( 'migud-mm-layout--collapsed', this.collapsed ).toggleClass( 'migud-mm-layout--drawer-open', locked );
 			this.$collapseBtn.add( this.$openBtn ).attr( 'aria-expanded', String( shown ) );
 			if ( this.$frame && this.$frame[ 0 ] ) {
 				this.$frame[ 0 ].inert = locked;
 			}
-			$( [ document.documentElement, document.body ] ).toggleClass( 'fmm-drawer-lock', locked );
+			$( [ document.documentElement, document.body ] ).toggleClass( 'migud-mm-drawer-lock', locked );
 		},
 
 		/**
@@ -2384,9 +2440,9 @@
 			var mac = this.isMac();
 			var target = event.target;
 			var plain = ! event.ctrlKey && ! event.metaKey && ! event.altKey;
-			var $folder = $( target ).closest( '.fmm-folder' );
-			var $li = $folder.closest( '.fmm-sidebar__item' );
-			var real = $li.hasClass( 'fmm-sidebar__item--folder' );
+			var $folder = $( target ).closest( '.migud-mm-folder' );
+			var $li = $folder.closest( '.migud-mm-sidebar__item' );
+			var real = $li.hasClass( 'migud-mm-sidebar__item--folder' );
 			var id = real ? rowValue( $li ) : '';
 			var rows, index, can, mod, delta, action, node;
 
@@ -2403,12 +2459,12 @@
 			}
 
 			if ( ( 'ArrowUp' === key || 'ArrowDown' === key ) && plain && ! event.shiftKey && $folder.length ) {
-				rows = this.$el.find( '.fmm-sidebar__list .fmm-folder' ).toArray();
+				rows = this.$el.find( '.migud-mm-sidebar__list .migud-mm-folder' ).toArray();
 				index = rows.indexOf( $folder[ 0 ] );
 				event.preventDefault();
 				event.stopPropagation();
 				if ( 'ArrowUp' === key && 0 === index ) {
-					this.$el.find( '.fmm-search__input' ).trigger( 'focus' );
+					this.$el.find( '.migud-mm-search__input' ).trigger( 'focus' );
 				} else if ( rows[ index + ( 'ArrowUp' === key ? -1 : 1 ) ] ) {
 					$( rows[ index + ( 'ArrowUp' === key ? -1 : 1 ) ] ).trigger( 'focus' );
 				}
@@ -2451,8 +2507,8 @@
 			if ( ! can[ action ] ) {
 				wp.a11y.speak( node && ( node.protected || ( 'delete' === action && node.lockedBelow ) || ( ( 'up' === action || 'down' === action ) && can.lockedPartner[ action ] ) ) ?
 					/* translators: %s: folder name. */
-					sprintf( __( 'Folder “%s” is locked.', 'fena-media-manager' ), node.folder.name ) :
-					__( 'This action is not available here.', 'fena-media-manager' ), 'polite' );
+					sprintf( __( 'Folder “%s” is locked.', 'migud-media-manager' ), node.folder.name ) :
+					__( 'This action is not available here.', 'migud-media-manager' ), 'polite' );
 				return;
 			}
 
@@ -2472,13 +2528,13 @@
 		openHelp: function() {
 			var self = this;
 			var mac = this.isMac();
-			var opener = document.activeElement && self.$el[ 0 ].contains( document.activeElement ) ? document.activeElement.getAttribute( 'data-fmm-key' ) : null;
+			var opener = document.activeElement && self.$el[ 0 ].contains( document.activeElement ) ? document.activeElement.getAttribute( 'data-migud-mm-key' ) : null;
 			var modifier = mac ? '⌘' : 'Ctrl';
 			var entries = [
-				[ [ '↑', '/', '↓' ], __( 'Move between folders', 'fena-media-manager' ) ],
-				[ [ 'Enter' ], __( 'Open folder', 'fena-media-manager' ) ]
+				[ [ '↑', '/', '↓' ], __( 'Move between folders', 'migud-media-manager' ) ],
+				[ [ 'Enter' ], __( 'Open folder', 'migud-media-manager' ) ]
 			];
-			var $list = $( '<dl class="fmm-shortcuts"></dl>' );
+			var $list = $( '<dl class="migud-mm-shortcuts"></dl>' );
 			var $body, api;
 
 			// Only one popup at a time: the help replaces an open sort or folder menu.
@@ -2488,12 +2544,12 @@
 			}
 
 			if ( store.canManage ) {
-				entries.push( [ [ 'Shift', '+', 'N' ], __( 'New folder', 'fena-media-manager' ) ] );
-				entries.push( [ [ 'F2' ], __( 'Rename folder', 'fena-media-manager' ) ] );
-				entries.push( [ mac ? [ '⌫', '/', 'Delete' ] : [ 'Delete' ], __( 'Delete folder (asks for confirmation)', 'fena-media-manager' ) ] );
-				entries.push( [ [ modifier, '+', '↑', '/', '↓' ], __( 'Move folder up or down (manual order)', 'fena-media-manager' ) ] );
+				entries.push( [ [ 'Shift', '+', 'N' ], __( 'New folder', 'migud-media-manager' ) ] );
+				entries.push( [ [ 'F2' ], __( 'Rename folder', 'migud-media-manager' ) ] );
+				entries.push( [ mac ? [ '⌫', '/', 'Delete' ] : [ 'Delete' ], __( 'Delete folder (asks for confirmation)', 'migud-media-manager' ) ] );
+				entries.push( [ [ modifier, '+', '↑', '/', '↓' ], __( 'Move folder up or down (manual order)', 'migud-media-manager' ) ] );
 			}
-			entries.push( [ [ '?' ], __( 'Show this help', 'fena-media-manager' ) ] );
+			entries.push( [ [ '?' ], __( 'Show this help', 'migud-media-manager' ) ] );
 
 			_.each( entries, function( entry ) {
 				var $keys = $( '<dt></dt>' );
@@ -2501,24 +2557,24 @@
 				_.each( entry[ 0 ], function( part ) {
 					$keys.append( _.contains( [ '+', '/' ], part ) ? document.createTextNode( ' ' + part + ' ' ) : $( '<kbd></kbd>' ).text( part ) );
 				} );
-				$list.append( $( '<div class="fmm-shortcuts__row"></div>' ).append( $keys, $( '<dd></dd>' ).text( entry[ 1 ] ) ) );
+				$list.append( $( '<div class="migud-mm-shortcuts__row"></div>' ).append( $keys, $( '<dd></dd>' ).text( entry[ 1 ] ) ) );
 			} );
 
 			$body = $( '<div></div>' ).append( $list );
 			if ( mac && store.canManage ) {
 				// Placeholders become real key caps; the surrounding text stays translatable.
 				/* translators: 1: "fn" key, 2: "F2" key. */
-				$body.append( $( '<p class="fmm-shortcuts__note"></p>' ).append( _.map( __( 'Use %1$s + %2$s to rename on Mac keyboards.', 'fena-media-manager' ).split( /(%[12]\$s)/ ), function( part ) {
+				$body.append( $( '<p class="migud-mm-shortcuts__note"></p>' ).append( _.map( __( 'Use %1$s + %2$s to rename on Mac keyboards.', 'migud-media-manager' ).split( /(%[12]\$s)/ ), function( part ) {
 					var key = { '%1$s': 'fn', '%2$s': 'F2' }[ part ];
 					return key ? $( '<kbd></kbd>' ).text( key )[ 0 ] : document.createTextNode( part );
 				} ) ) );
 			}
 
 			api = this.dialog( {
-				title: __( 'Keyboard shortcuts', 'fena-media-manager' ),
+				title: __( 'Keyboard shortcuts', 'migud-media-manager' ),
 				body: $body,
 				closeOnly: true,
-				className: 'fmm-dialog--help',
+				className: 'migud-mm-dialog--help',
 				onClose: function() {
 					self.focusKey( opener || 'help' );
 				}
@@ -2579,31 +2635,31 @@
 			var items = [];
 
 			if ( can.rename ) {
-				items.push( { className: 'fmm-folder-rename', icon: 'rename', key: 'rename-' + id, label: __( 'Rename', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-rename', icon: 'rename', key: 'rename-' + id, label: __( 'Rename', 'migud-media-manager' ) } );
 			}
 			if ( can.moveTo ) {
-				items.push( { className: 'fmm-folder-moveto', icon: 'move-to', key: 'moveto-' + id, label: __( 'Move to…', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-moveto', icon: 'move-to', key: 'moveto-' + id, label: __( 'Move to…', 'migud-media-manager' ) } );
 			}
 			if ( can.appearance ) {
-				items.push( { className: 'fmm-folder-color', icon: 'color', key: 'color-' + id, label: __( 'Appearance…', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-color', icon: 'color', key: 'color-' + id, label: __( 'Appearance…', 'migud-media-manager' ) } );
 			}
 			if ( can.up ) {
-				items.push( { className: 'fmm-folder-up', icon: 'move-up', key: 'up-' + id, label: __( 'Move up', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-up', icon: 'move-up', key: 'up-' + id, label: __( 'Move up', 'migud-media-manager' ) } );
 			}
 			if ( can.down ) {
-				items.push( { className: 'fmm-folder-down', icon: 'move-down', key: 'down-' + id, label: __( 'Move down', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-down', icon: 'move-down', key: 'down-' + id, label: __( 'Move down', 'migud-media-manager' ) } );
 			}
 			items.push( can.unlock ?
-				{ className: 'fmm-folder-unlock', icon: 'unlock', key: 'unlock-' + id, label: __( 'Unlock folder', 'fena-media-manager' ) } :
-				{ className: 'fmm-folder-lock', icon: 'lock', key: 'lock-' + id, label: __( 'Lock folder', 'fena-media-manager' ) } );
+				{ className: 'migud-mm-folder-unlock', icon: 'unlock', key: 'unlock-' + id, label: __( 'Unlock folder', 'migud-media-manager' ) } :
+				{ className: 'migud-mm-folder-lock', icon: 'lock', key: 'lock-' + id, label: __( 'Lock folder', 'migud-media-manager' ) } );
 			if ( can[ 'delete' ] ) {
-				items.push( { className: 'fmm-folder-delete', icon: 'delete', key: 'delete-' + id, label: __( 'Delete', 'fena-media-manager' ) } );
+				items.push( { className: 'migud-mm-folder-delete', icon: 'delete', key: 'delete-' + id, label: __( 'Delete', 'migud-media-manager' ) } );
 			}
 
-			return $( '<div class="fmm-menu" role="menu"></div>' ).attr( { id: 'fmm-folder-menu-' + id, 'aria-labelledby': 'fmm-folder-menu-toggle-' + id } ).append( _.map( items, function( item ) {
-				return $( '<button type="button" class="fmm-menu__item" role="menuitem"></button>' )
+			return $( '<div class="migud-mm-menu" role="menu"></div>' ).attr( { id: 'migud-mm-folder-menu-' + id, 'aria-labelledby': 'migud-mm-folder-menu-toggle-' + id } ).append( _.map( items, function( item ) {
+				return $( '<button type="button" class="migud-mm-menu__item" role="menuitem"></button>' )
 					.addClass( item.className )
-					.attr( 'data-fmm-key', item.key )
+					.attr( 'data-migud-mm-key', item.key )
 					.append( icon( item.icon ), $( '<span></span>' ).text( item.label ) );
 			} ) );
 		},
@@ -2622,7 +2678,7 @@
 			button.setAttribute( 'aria-expanded', String( expanded ) );
 			button.setAttribute( 'aria-label', label );
 			button.setAttribute( 'title', label );
-			button.setAttribute( 'data-fmm-key', 'toggle-' + folder.id );
+			button.setAttribute( 'data-migud-mm-key', 'toggle-' + folder.id );
 			button.disabled = !! this.query;
 			button.appendChild( iconEl( expanded ? 'expanded' : 'collapsed' ) );
 
@@ -2642,7 +2698,7 @@
 				return node;
 			}() ) ) ).cloneNode( true );
 
-			button.setAttribute( 'data-fmm-key', key );
+			button.setAttribute( 'data-migud-mm-key', key );
 			button.setAttribute( 'aria-label', label );
 			button.setAttribute( 'title', label );
 
@@ -2650,14 +2706,14 @@
 		},
 
 		form: function( value ) {
-			var id = 'fmm-folder-name-input';
+			var id = 'migud-mm-folder-name-input';
 
-			return $( '<form class="fmm-form"></form>' ).append(
-				$( '<label class="screen-reader-text"></label>' ).attr( 'for', id ).text( __( 'Folder name', 'fena-media-manager' ) ),
-				$( '<input type="text" class="fmm-form__input" maxlength="200" />' ).attr( 'id', id ).val( value || '' ),
-				$( '<span class="fmm-form__buttons"></span>' ).append(
-					$( '<button type="submit" class="button button-primary button-small"></button>' ).text( __( 'Save', 'fena-media-manager' ) ),
-					$( '<button type="button" class="button button-small fmm-form-cancel"></button>' ).text( __( 'Cancel', 'fena-media-manager' ) )
+			return $( '<form class="migud-mm-form"></form>' ).append(
+				$( '<label class="screen-reader-text"></label>' ).attr( 'for', id ).text( __( 'Folder name', 'migud-media-manager' ) ),
+				$( '<input type="text" class="migud-mm-form__input" maxlength="200" />' ).attr( 'id', id ).val( value || '' ),
+				$( '<span class="migud-mm-form__buttons"></span>' ).append(
+					$( '<button type="submit" class="button button-primary button-small"></button>' ).text( __( 'Save', 'migud-media-manager' ) ),
+					$( '<button type="button" class="button button-small migud-mm-form-cancel"></button>' ).text( __( 'Cancel', 'migud-media-manager' ) )
 				)
 			);
 		},
@@ -2690,15 +2746,15 @@
 			this.$el.toggleClass( 'has-tree', this.hasTree );
 
 			frag = document.createDocumentFragment();
-			frag.appendChild( this.row( '', __( 'All Media', 'fena-media-manager' ), store.total, 'all', false, ctx ) );
-			frag.appendChild( this.row( 'none', __( 'Unassigned', 'fena-media-manager' ), store.unassigned, 'unassigned', false, ctx ) );
+			frag.appendChild( this.row( '', __( 'All Media', 'migud-media-manager' ), store.total, 'all', false, ctx ) );
+			frag.appendChild( this.row( 'none', __( 'Unassigned', 'migud-media-manager' ), store.unassigned, 'unassigned', false, ctx ) );
 
 			if ( 'new' === this.editing && ! this.newParent ) {
-				frag.appendChild( $( '<li class="fmm-sidebar__item fmm-sidebar__item--new"></li>' ).append( this.form( '' ) )[ 0 ] );
+				frag.appendChild( $( '<li class="migud-mm-sidebar__item migud-mm-sidebar__item--new"></li>' ).append( this.form( '' ) )[ 0 ] );
 			}
 
 			if ( visible && ! this.matchCount ) {
-				frag.appendChild( $( '<li class="fmm-sidebar__item fmm-sidebar__empty"></li>' ).text( __( 'No folders found.', 'fena-media-manager' ) )[ 0 ] );
+				frag.appendChild( $( '<li class="migud-mm-sidebar__item migud-mm-sidebar__empty"></li>' ).text( __( 'No folders found.', 'migud-media-manager' ) )[ 0 ] );
 			}
 
 			// Rows below a collapsed folder are not rendered; the folder filter is unaffected.
@@ -2717,8 +2773,8 @@
 				frag.appendChild( self.row( id, node.folder.name, node.folder.count, 'folder', true, ctx, node ) );
 
 				if ( 'new' === self.editing && self.newParent === id ) {
-					$new = $( '<li class="fmm-sidebar__item fmm-sidebar__item--new"></li>' ).append( self.form( '' ) );
-					$new[ 0 ].style.setProperty( '--fmm-depth', node.depth + 1 );
+					$new = $( '<li class="migud-mm-sidebar__item migud-mm-sidebar__item--new"></li>' ).append( self.form( '' ) );
+					$new[ 0 ].style.setProperty( '--migud-mm-depth', node.depth + 1 );
 					frag.appendChild( $new[ 0 ] );
 				}
 			} );
@@ -2737,8 +2793,8 @@
 
 			this.renderActive();
 
-			if ( this.$el.find( '.fmm-form__input' ).length && document.activeElement !== this.$el.find( '.fmm-search__input' )[ 0 ] ) {
-				this.$el.find( '.fmm-form__input' ).trigger( 'focus' ).trigger( 'select' );
+			if ( this.$el.find( '.migud-mm-form__input' ).length && document.activeElement !== this.$el.find( '.migud-mm-search__input' )[ 0 ] ) {
+				this.$el.find( '.migud-mm-form__input' ).trigger( 'focus' ).trigger( 'select' );
 			} else if ( focusKey ) {
 				this.focusKey( focusKey );
 			}
@@ -2749,12 +2805,12 @@
 		},
 
 		/**
-		 * data-fmm-key of the focused element inside the sidebar, if any.
+		 * data-migud-mm-key of the focused element inside the sidebar, if any.
 		 *
 		 * @return {string|null} Key.
 		 */
 		focusedKey: function() {
-			return $( document.activeElement ).closest( this.$el ).length ? $( document.activeElement ).attr( 'data-fmm-key' ) : null;
+			return $( document.activeElement ).closest( this.$el ).length ? $( document.activeElement ).attr( 'data-migud-mm-key' ) : null;
 		},
 
 		/**
@@ -2764,11 +2820,11 @@
 		 */
 		renderSelectionUi: function( selected ) {
 			this.$el.toggleClass( 'has-selection', selected > 0 );
-			this.$el.find( '.fmm-sidebar__selection' ).prop( 'hidden', ! selected ).text( ! selected ? '' : ( this.currentFolder() ?
+			this.$el.find( '.migud-mm-sidebar__selection' ).prop( 'hidden', ! selected ).text( ! selected ? '' : ( this.currentFolder() ?
 				/* translators: %d: number of selected media files. */
-				sprintf( _n( '%d media file selected. Use +, → or − next to a folder, or drag the selection onto a folder to move it (hold Ctrl/⌘ to add it instead).', '%d media files selected. Use +, → or − next to a folder, or drag the selection onto a folder to move it (hold Ctrl/⌘ to add it instead).', selected, 'fena-media-manager' ), selected ) :
+				sprintf( _n( '%d media file selected. Use +, → or − next to a folder, or drag the selection onto a folder to move it (hold Ctrl/⌘ to add it instead).', '%d media files selected. Use +, → or − next to a folder, or drag the selection onto a folder to move it (hold Ctrl/⌘ to add it instead).', selected, 'migud-media-manager' ), selected ) :
 				/* translators: %d: number of selected media files. */
-				sprintf( _n( '%d media file selected. Use + or − next to a folder, or drag the selection onto a folder.', '%d media files selected. Use + or − next to a folder, or drag the selection onto a folder.', selected, 'fena-media-manager' ), selected ) ) );
+				sprintf( _n( '%d media file selected. Use + or − next to a folder, or drag the selection onto a folder.', '%d media files selected. Use + or − next to a folder, or drag the selection onto a folder.', selected, 'migud-media-manager' ), selected ) ) );
 		},
 
 		/**
@@ -2823,7 +2879,7 @@
 			}
 
 			li.classList.toggle( 'is-active', active );
-			button = li.querySelector( '.fmm-folder' );
+			button = li.querySelector( '.migud-mm-folder' );
 			if ( ! button ) {
 				return;
 			}
@@ -2832,9 +2888,9 @@
 			} else {
 				button.removeAttribute( 'aria-current' );
 			}
-			if ( li.classList.contains( 'fmm-sidebar__item--folder' ) ) {
+			if ( li.classList.contains( 'migud-mm-sidebar__item--folder' ) ) {
 				use = button.querySelector( 'use' );
-				href = '#fmm-i-' + ( active ? 'folder-open' : 'folder' );
+				href = '#migud-mm-i-' + ( active ? 'folder-open' : 'folder' );
 				if ( use && use.getAttribute( 'href' ) !== href ) {
 					use.setAttribute( 'href', href );
 				}
@@ -2902,10 +2958,10 @@
 				this.menuOpen = null;
 			}
 
-			Array.prototype.forEach.call( this.list.querySelectorAll( '.fmm-sidebar__item--folder' ), function( li ) {
+			Array.prototype.forEach.call( this.list.querySelectorAll( '.migud-mm-sidebar__item--folder' ), function( li ) {
 				var value = li.getAttribute( 'data-folder' );
 				var folder = store.get( value );
-				var button = li.querySelector( '.fmm-folder' );
+				var button = li.querySelector( '.migud-mm-folder' );
 				var i, child;
 
 				if ( ! folder || ! button ) {
@@ -2914,7 +2970,7 @@
 
 				for ( i = li.children.length - 1; i >= 0; i-- ) {
 					child = li.children[ i ];
-					if ( child.classList.contains( 'fmm-folder__assign' ) || child.classList.contains( 'fmm-folder__actions' ) || child.classList.contains( 'fmm-menu' ) ) {
+					if ( child.classList.contains( 'migud-mm-folder__assign' ) || child.classList.contains( 'migud-mm-folder__actions' ) || child.classList.contains( 'migud-mm-menu' ) ) {
 						li.removeChild( child );
 					}
 				}
@@ -2937,18 +2993,18 @@
 		/**
 		 * Restores focus after re-rendering; falls back to the folder button.
 		 *
-		 * @param {string} key data-fmm-key of the element.
+		 * @param {string} key data-migud-mm-key of the element.
 		 */
 		focusKey: function( key ) {
-			var $target = this.$el.find( '[data-fmm-key="' + key + '"]' );
+			var $target = this.$el.find( '[data-migud-mm-key="' + key + '"]' );
 			var action = /^(?:menu|subfolder|up|down)-(.+)$/.exec( key );
 
 			if ( ! $target.length && action ) {
 				this.prepare( action[ 1 ] );
-				$target = this.$el.find( '[data-fmm-key="' + key + '"]' );
+				$target = this.$el.find( '[data-migud-mm-key="' + key + '"]' );
 			}
 			if ( ! $target.length ) {
-				$target = this.$el.find( '[data-fmm-key="folder-' + String( key ).replace( /^[a-z]+-/, '' ) + '"]' );
+				$target = this.$el.find( '[data-migud-mm-key="folder-' + String( key ).replace( /^[a-z]+-/, '' ) + '"]' );
 			}
 			$target.first().trigger( 'focus' );
 		},
@@ -2997,11 +3053,11 @@
 		 * @param {string} type    success, warning or error.
 		 */
 		notice: function( message, type ) {
-			var $notice = this.$el.find( '.fmm-sidebar__notice' );
+			var $notice = this.$el.find( '.migud-mm-sidebar__notice' );
 			type = type || 'error';
 			$notice.removeClass( 'notice-success notice-warning notice-error' ).addClass( 'notice-' + type );
 			$notice.find( 'p' ).text( message );
-			$notice.find( '.fmm-notice-ui__icon' ).empty().append( icon( 'notice-' + type ) );
+			$notice.find( '.migud-mm-notice-ui__icon' ).empty().append( icon( 'notice-' + type ) );
 			$notice.prop( 'hidden', ! message );
 			if ( message && wp.a11y ) {
 				wp.a11y.speak( message, 'error' === type ? 'assertive' : 'polite' );
@@ -3010,7 +3066,7 @@
 
 		fail: function( error, fallback ) {
 			this.busy = false;
-			this.notice( ( error && error.message ) || fallback || __( 'The folder could not be saved.', 'fena-media-manager' ), 'error' );
+			this.notice( ( error && error.message ) || fallback || __( 'The folder could not be saved.', 'migud-media-manager' ), 'error' );
 		},
 
 		save: function( rawName ) {
@@ -3023,7 +3079,7 @@
 				return;
 			}
 			if ( ! name ) {
-				this.notice( __( 'Please enter a folder name.', 'fena-media-manager' ), 'error' );
+				this.notice( __( 'Please enter a folder name.', 'migud-media-manager' ), 'error' );
 				return;
 			}
 			if ( isNew && this.newParent ) {
@@ -3032,7 +3088,7 @@
 
 			this.busy = true;
 			wp.apiFetch( {
-				path: isNew ? '/fmm/v1/folders' : '/fmm/v1/folders/' + this.editing,
+				path: isNew ? '/migud-mm/v1/folders' : '/migud-mm/v1/folders/' + this.editing,
 				method: isNew ? 'POST' : 'PATCH',
 				data: data
 			} ).then( function( folder ) {
@@ -3041,9 +3097,9 @@
 				self.newParent = '';
 				self.notice( isNew ?
 					/* translators: %s: folder name. */
-					sprintf( __( 'Folder “%s” created.', 'fena-media-manager' ), folder.name ) :
+					sprintf( __( 'Folder “%s” created.', 'migud-media-manager' ), folder.name ) :
 					/* translators: %s: folder name. */
-					sprintf( __( 'Folder renamed to “%s”.', 'fena-media-manager' ), folder.name ), 'success' );
+					sprintf( __( 'Folder renamed to “%s”.', 'migud-media-manager' ), folder.name ), 'success' );
 				return store.refresh().then( function() {
 					self.focusKey( 'folder-' + folder.id );
 				} );
@@ -3068,13 +3124,13 @@
 
 			this.menuOpen = null;
 			this.busy = true;
-			wp.apiFetch( { path: '/fmm/v1/folders/' + id, method: 'PATCH', data: { locked: locked } } ).then( function() {
+			wp.apiFetch( { path: '/migud-mm/v1/folders/' + id, method: 'PATCH', data: { locked: locked } } ).then( function() {
 				self.busy = false;
 				self.notice( locked ?
 					/* translators: %s: folder name. */
-					sprintf( __( 'Folder “%s” locked.', 'fena-media-manager' ), folder.name ) :
+					sprintf( __( 'Folder “%s” locked.', 'migud-media-manager' ), folder.name ) :
 					/* translators: %s: folder name. */
-					sprintf( __( 'Folder “%s” unlocked.', 'fena-media-manager' ), folder.name ), 'success' );
+					sprintf( __( 'Folder “%s” unlocked.', 'migud-media-manager' ), folder.name ), 'success' );
 				return store.refresh().then( function() {
 					self.focusKey( 'folder-' + id );
 				} );
@@ -3091,7 +3147,7 @@
 			function run( api ) {
 				self.menuOpen = null;
 				self.busy = true;
-				wp.apiFetch( { path: '/fmm/v1/folders/' + id, method: 'DELETE' } ).then( function() {
+				wp.apiFetch( { path: '/migud-mm/v1/folders/' + id, method: 'DELETE' } ).then( function() {
 					self.busy = false;
 					if ( api ) {
 						api.close();
@@ -3100,7 +3156,7 @@
 						self.library.props.set( PROP, null );
 					}
 					/* translators: %s: folder name. */
-					self.notice( sprintf( __( 'Folder “%s” deleted.', 'fena-media-manager' ), folder.name ), 'success' );
+					self.notice( sprintf( __( 'Folder “%s” deleted.', 'migud-media-manager' ), folder.name ), 'success' );
 					return store.refresh().then( function() {
 						self.focusKey( 'folder-' );
 					} );
@@ -3108,7 +3164,7 @@
 					if ( api ) {
 						self.busy = false;
 						api.busy( false );
-						api.error( ( error && error.message ) || __( 'The folder could not be deleted.', 'fena-media-manager' ) );
+						api.error( ( error && error.message ) || __( 'The folder could not be deleted.', 'migud-media-manager' ) );
 						return;
 					}
 					self.fail( error );
@@ -3119,21 +3175,21 @@
 				return;
 			}
 			/* translators: %s: folder name. */
-			message = sprintf( __( 'Delete the folder “%s”? The media files stay in your library.', 'fena-media-manager' ), folder.name );
+			message = sprintf( __( 'Delete the folder “%s”? The media files stay in your library.', 'migud-media-manager' ), folder.name );
 			// Core moves the subfolders of a deleted term one level up.
 			if ( _.some( store.folders, function( other ) {
 				return String( other.parent ) === String( id );
 			} ) ) {
-				message += ' ' + __( 'Its subfolders move up one level.', 'fena-media-manager' );
+				message += ' ' + __( 'Its subfolders move up one level.', 'migud-media-manager' );
 			}
 
 			if ( window.HTMLDialogElement && HTMLDialogElement.prototype.showModal ) {
 				this.dialog( {
-					title: __( 'Delete folder?', 'fena-media-manager' ),
+					title: __( 'Delete folder?', 'migud-media-manager' ),
 					describe: true,
 					initialFocus: 'cancel',
 					body: $( '<p></p>' ).text( message ),
-					submit: __( 'Delete', 'fena-media-manager' ),
+					submit: __( 'Delete', 'migud-media-manager' ),
 					focus: 'folder-' + id,
 					onSubmit: function( api ) {
 						if ( self.busy ) {
@@ -3185,7 +3241,7 @@
 
 			this.busy = true;
 			wp.apiFetch( {
-				path: '/fmm/v1/assign',
+				path: '/migud-mm/v1/assign',
 				method: 'POST',
 				data: data
 			} ).then( function( result ) {
@@ -3195,22 +3251,22 @@
 
 				self.busy = false;
 				_.each( result.updated, function( item ) {
-					wp.media.model.Attachment.get( item.id ).set( 'fmmFolders', item.folders );
+					wp.media.model.Attachment.get( item.id ).set( 'migudMMFolders', item.folders );
 				} );
 
 				if ( 'move' === mode ) {
 					/* translators: 1: number of media files, 2: source folder name, 3: target folder name. */
-					message = sprintf( _n( '%1$d media file moved from “%2$s” to “%3$s”.', '%1$d media files moved from “%2$s” to “%3$s”.', done, 'fena-media-manager' ), done, ( store.get( source ) || {} ).name, folder.name );
+					message = sprintf( _n( '%1$d media file moved from “%2$s” to “%3$s”.', '%1$d media files moved from “%2$s” to “%3$s”.', done, 'migud-media-manager' ), done, ( store.get( source ) || {} ).name, folder.name );
 				} else if ( add ) {
 					/* translators: 1: number of media files, 2: folder name. */
-					message = sprintf( _n( '%1$d media file added to “%2$s”.', '%1$d media files added to “%2$s”.', done, 'fena-media-manager' ), done, folder.name );
+					message = sprintf( _n( '%1$d media file added to “%2$s”.', '%1$d media files added to “%2$s”.', done, 'migud-media-manager' ), done, folder.name );
 				} else {
 					/* translators: 1: number of media files, 2: folder name. */
-					message = sprintf( _n( '%1$d media file removed from “%2$s”.', '%1$d media files removed from “%2$s”.', done, 'fena-media-manager' ), done, folder.name );
+					message = sprintf( _n( '%1$d media file removed from “%2$s”.', '%1$d media files removed from “%2$s”.', done, 'migud-media-manager' ), done, folder.name );
 				}
 				if ( skipped ) {
 					/* translators: %d: number of media files. */
-					message += ' ' + sprintf( _n( '%d media file could not be changed (missing permission).', '%d media files could not be changed (missing permission).', skipped, 'fena-media-manager' ), skipped );
+					message += ' ' + sprintf( _n( '%d media file could not be changed (missing permission).', '%d media files could not be changed (missing permission).', skipped, 'migud-media-manager' ), skipped );
 				}
 				self.notice( message, skipped ? 'warning' : 'success' );
 
@@ -3230,12 +3286,12 @@
 
 				return store.refresh();
 			} ).catch( function( error ) {
-				if ( error && 'fmm_nothing_updated' === error.code ) {
+				if ( error && 'migud_mm_nothing_updated' === error.code ) {
 					/* translators: %d: number of media files. */
-					self.fail( null, sprintf( _n( 'The media file could not be changed (missing permission).', 'None of the %d media files could be changed (missing permission).', ids.length, 'fena-media-manager' ), ids.length ) );
+					self.fail( null, sprintf( _n( 'The media file could not be changed (missing permission).', 'None of the %d media files could be changed (missing permission).', ids.length, 'migud-media-manager' ), ids.length ) );
 					return;
 				}
-				self.fail( error, __( 'The folder assignment could not be saved.', 'fena-media-manager' ) );
+				self.fail( error, __( 'The folder assignment could not be saved.', 'migud-media-manager' ) );
 			} );
 		}
 	} );
@@ -3247,19 +3303,19 @@
 			return;
 		}
 
-		if ( fmm.bindUploader ) {
-			fmm.bindUploader( frame.uploader );
+		if ( migudMM.bindUploader ) {
+			migudMM.bindUploader( frame.uploader );
 		}
 
 		sidebar = new Sidebar( frame );
 		$wrap = frame.$el.parent();
 		if ( $wrap.is( '#wp-media-grid' ) ) {
-			$wrap.addClass( 'fmm-layout' );
+			$wrap.addClass( 'migud-mm-layout' );
 		} else {
-			frame.$el.wrap( '<div class="fmm-layout"></div>' );
+			frame.$el.wrap( '<div class="migud-mm-layout"></div>' );
 		}
 		// The rail sits before the grid so reading and tab order stay: heading, notices, folders, grid.
-		$rail = $( '<div class="fmm fmm-layout__rail"></div>' ).append( sidebar.$el ).insertBefore( frame.$el );
+		$rail = $( '<div class="migud-mm migud-mm-layout__rail"></div>' ).append( sidebar.$el ).insertBefore( frame.$el );
 		sidebar.mountPanel( frame.$el.parent(), $rail, frame.$el );
 
 		// The grid computes its columns from the container width.

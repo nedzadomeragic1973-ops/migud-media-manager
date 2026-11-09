@@ -2,7 +2,7 @@
 /**
  * Folder taxonomy, capabilities and folder helpers.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -10,12 +10,12 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Virtual media folders stored as a private attachment taxonomy.
  */
-class FMM_Taxonomy {
+class Migud_MM_Taxonomy {
 
 	/**
 	 * Taxonomy name.
 	 */
-	const NAME = 'fmm_folder';
+	const NAME = 'migud_mm_folder';
 
 	/**
 	 * Maximum folder name length (wp_terms.name is varchar(200)).
@@ -25,17 +25,17 @@ class FMM_Taxonomy {
 	/**
 	 * Term meta key of the manual folder position among siblings.
 	 */
-	const ORDER_META = 'fmm_order';
+	const ORDER_META = 'migud_mm_order';
 
 	/**
 	 * User meta key of the folder sort mode.
 	 */
-	const SORT_META = 'fmm_folder_sort';
+	const SORT_META = 'migud_mm_folder_sort';
 
 	/**
 	 * Term meta key of the folder color. Gray (default) stores nothing.
 	 */
-	const COLOR_META = 'fmm_color';
+	const COLOR_META = 'migud_mm_color';
 
 	/**
 	 * Preset folder colors.
@@ -45,16 +45,16 @@ class FMM_Taxonomy {
 	/**
 	 * Term meta key of the folder icon. The plain folder (default) stores nothing.
 	 */
-	const ICON_META = 'fmm_icon';
+	const ICON_META = 'migud_mm_icon';
 
 	/**
 	 * Term meta key of the folder lock ('1' = locked). Unlocked stores nothing.
 	 * A lock protects the structure (rename, move, delete, subfolders), not access.
 	 */
-	const LOCK_META = 'fmm_locked';
+	const LOCK_META = 'migud_mm_locked';
 
 	/**
-	 * Folder icons: glyphs shown next to the folder icon (see FMM_Icons::GLYPHS).
+	 * Folder icons: glyphs shown next to the folder icon (see Migud_MM_Icons::GLYPHS).
 	 */
 	const ICONS = array( 'image', 'video', 'document', 'audio', 'archive', 'star', 'people', 'tag' );
 
@@ -81,12 +81,12 @@ class FMM_Taxonomy {
 			'attachment',
 			array(
 				'labels'                => array(
-					'name'          => __( 'Folders', 'fena-media-manager' ),
-					'singular_name' => __( 'Folder', 'fena-media-manager' ),
-					'all_items'     => __( 'All Media', 'fena-media-manager' ),
-					'add_new_item'  => __( 'New Folder', 'fena-media-manager' ),
-					'edit_item'     => __( 'Rename Folder', 'fena-media-manager' ),
-					'not_found'     => __( 'No folders yet.', 'fena-media-manager' ),
+					'name'          => __( 'Folders', 'migud-media-manager' ),
+					'singular_name' => __( 'Folder', 'migud-media-manager' ),
+					'all_items'     => __( 'All Media', 'migud-media-manager' ),
+					'add_new_item'  => __( 'New Folder', 'migud-media-manager' ),
+					'edit_item'     => __( 'Rename Folder', 'migud-media-manager' ),
+					'not_found'     => __( 'No folders yet.', 'migud-media-manager' ),
 				),
 				'public'                => false,
 				'publicly_queryable'    => false,
@@ -274,7 +274,7 @@ class FMM_Taxonomy {
 	 * @return string One of SORT_MODES.
 	 */
 	private static function default_sort_mode() {
-		return FMM_Settings::get( 'default_sort' );
+		return Migud_MM_Settings::get( 'default_sort' );
 	}
 
 	/**
@@ -299,7 +299,7 @@ class FMM_Taxonomy {
 	 * @return string
 	 */
 	public static function manage_capability() {
-		return (string) apply_filters( 'fmm_manage_folders_capability', 'edit_others_posts' );
+		return (string) apply_filters( 'migud_mm_manage_folders_capability', 'edit_others_posts' );
 	}
 
 	/**
@@ -735,8 +735,8 @@ class FMM_Taxonomy {
 
 		if ( count( array_unique( $ids ) ) !== count( $ids ) || $sorted !== $expected ) {
 			return new WP_Error(
-				'fmm_order_conflict',
-				__( 'The folders have changed in the meantime. Please try again.', 'fena-media-manager' ),
+				'migud_mm_order_conflict',
+				__( 'The folders have changed in the meantime. Please try again.', 'migud-media-manager' ),
 				array( 'status' => 409 )
 			);
 		}
@@ -752,7 +752,7 @@ class FMM_Taxonomy {
 	 * All folders in tree order (depth first, siblings in the sort mode of
 	 * the current user, or the given mode) with their `depth`. Folders whose
 	 * parent is missing are shown at the top level. Same order as
-	 * store.tree() in fmm-media-filter.js.
+	 * store.tree() in migud-mm-media-filter.js.
 	 *
 	 * @param string|null $mode One of SORT_MODES; defaults to the sort mode of the current user.
 	 * @return array[]
@@ -803,10 +803,10 @@ class FMM_Taxonomy {
 	public static function validate_name( $name ) {
 		if ( '' === $name || self::length( $name ) > self::MAX_NAME_LENGTH ) {
 			return new WP_Error(
-				'fmm_invalid_name',
+				'migud_mm_invalid_name',
 				sprintf(
 					/* translators: %d: maximum number of characters. */
-					__( 'Folder names must contain 1 to %d characters.', 'fena-media-manager' ),
+					__( 'Folder names must contain 1 to %d characters.', 'migud-media-manager' ),
 					self::MAX_NAME_LENGTH
 				),
 				array( 'status' => 400 )

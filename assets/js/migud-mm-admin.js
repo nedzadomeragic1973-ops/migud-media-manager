@@ -1,10 +1,10 @@
 /**
- * Fena Media Manager: settings page. Replaces the select fields with the Fena
+ * MIGUD Media Manager: settings page. Replaces the select fields with the MIGUD
  * dropdown (the native select stays in the form and keeps the value) and
  * switches the import preview between the merge and skip statuses. Without
  * JavaScript the native selects and the merge statuses stay visible.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 ( function() {
@@ -14,7 +14,7 @@
 		var picker, label, labelId, button, described, stack;
 		var options = [];
 
-		if ( ! select || ! window.fmmPicker || ! window.jQuery ) {
+		if ( ! select || ! window.migudMMPicker || ! window.jQuery ) {
 			return;
 		}
 
@@ -36,7 +36,7 @@
 
 		label = document.querySelector( 'label[for="' + select.id + '"]' );
 		labelId = label ? ( label.id || ( label.id = select.id + '-label' ) ) : '';
-		picker = window.fmmPicker.create( {
+		picker = window.migudMMPicker.create( {
 			id: select.id + '-picker',
 			labelId: labelId,
 			listId: select.id + '-listbox',
@@ -50,7 +50,7 @@
 
 		select.hidden = true;
 		select.parentNode.insertBefore( picker.$el[ 0 ], select.nextSibling );
-		button = picker.$el[ 0 ].querySelector( '.fmm-picker__button' );
+		button = picker.$el[ 0 ].querySelector( '.migud-mm-picker__button' );
 		if ( label ) {
 			label.setAttribute( 'for', button.id );
 			label.addEventListener( 'click', function( event ) {
@@ -65,34 +65,34 @@
 		}
 	}
 
-	enhance( document.getElementById( 'fmm-default-sort' ) );
-	enhance( document.getElementById( 'fmm-upload-folder' ) );
+	enhance( document.getElementById( 'migud-mm-default-sort' ) );
+	enhance( document.getElementById( 'migud-mm-upload-folder' ) );
 
-	// Success notices get the same card as the folder sidebar (see fmm-components.css).
+	// Success notices get the same card as the folder sidebar (see migud-mm-components.css).
 	function svgIcon( id ) {
 		var ns = 'http://www.w3.org/2000/svg';
 		var svg = document.createElementNS( ns, 'svg' );
 		var use = document.createElementNS( ns, 'use' );
 
-		svg.setAttribute( 'class', 'fmm-icon' );
+		svg.setAttribute( 'class', 'migud-mm-icon' );
 		svg.setAttribute( 'aria-hidden', 'true' );
 		svg.setAttribute( 'focusable', 'false' );
-		use.setAttribute( 'href', '#fmm-i-' + id );
+		use.setAttribute( 'href', '#migud-mm-i-' + id );
 		svg.appendChild( use );
 
 		return svg;
 	}
 
 	function enhanceNotices() {
-		Array.prototype.forEach.call( document.querySelectorAll( '.fmm-settings .notice-success' ), function( notice ) {
+		Array.prototype.forEach.call( document.querySelectorAll( '.migud-mm-settings .notice-success' ), function( notice ) {
 			var icon, dismiss;
 
-			if ( notice.classList.contains( 'fmm-notice-ui' ) ) {
+			if ( notice.classList.contains( 'migud-mm-notice-ui' ) ) {
 				return;
 			}
-			notice.classList.add( 'fmm-notice-ui' );
+			notice.classList.add( 'migud-mm-notice-ui' );
 			icon = document.createElement( 'span' );
-			icon.className = 'fmm-notice-ui__icon';
+			icon.className = 'migud-mm-notice-ui__icon';
 			icon.setAttribute( 'aria-hidden', 'true' );
 			icon.appendChild( svgIcon( 'check' ) );
 			notice.insertBefore( icon, notice.firstChild );
@@ -108,26 +108,26 @@
 		window.setTimeout( enhanceNotices, 0 );
 	} );
 
-	var preview = document.querySelector( '.fmm-preview' );
+	var preview = document.querySelector( '.migud-mm-preview' );
 
 	if ( ! preview ) {
 		return;
 	}
 
 	function update() {
-		var checked = preview.querySelector( 'input[name="fmm_strategy"]:checked' );
+		var checked = preview.querySelector( 'input[name="migud_mm_strategy"]:checked' );
 		var strategy = checked ? checked.value : 'merge';
 
 		preview.setAttribute( 'data-strategy', strategy );
-		Array.prototype.forEach.call( preview.querySelectorAll( '.fmm-badge[data-view]' ), function( badge ) {
+		Array.prototype.forEach.call( preview.querySelectorAll( '.migud-mm-badge[data-view]' ), function( badge ) {
 			badge.hidden = badge.getAttribute( 'data-view' ) !== strategy;
 		} );
-		Array.prototype.forEach.call( preview.querySelectorAll( '.fmm-preview__summary' ), function( summary, index ) {
+		Array.prototype.forEach.call( preview.querySelectorAll( '.migud-mm-preview__summary' ), function( summary, index ) {
 			summary.classList.toggle( 'is-selected', ( 0 === index ? 'merge' : 'skip' ) === strategy );
 		} );
 	}
 
-	Array.prototype.forEach.call( preview.querySelectorAll( 'input[name="fmm_strategy"]' ), function( radio ) {
+	Array.prototype.forEach.call( preview.querySelectorAll( 'input[name="migud_mm_strategy"]' ), function( radio ) {
 		radio.addEventListener( 'change', update );
 	} );
 

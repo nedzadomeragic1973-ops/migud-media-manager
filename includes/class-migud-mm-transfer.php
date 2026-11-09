@@ -2,7 +2,7 @@
 /**
  * Import and export of folder structures (JSON).
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -12,12 +12,18 @@ defined( 'ABSPATH' ) || exit;
  * Only structure, names, colors, icons and manual order are transferred; media,
  * assignments, IDs and settings never are.
  */
-class FMM_Transfer {
+class Migud_MM_Transfer {
 
 	/**
 	 * File format identifier.
 	 */
-	const FORMAT = 'fena-media-manager/folders';
+	const FORMAT = 'migud-media-manager/folders';
+
+	/**
+	 * Format identifiers of earlier plugin names that are still accepted on import
+	 * (same structure, version 1): files exported by "Fena Media Manager".
+	 */
+	const LEGACY_FORMATS = array( 'fena-media-manager/folders' );
 
 	/**
 	 * File format version.
@@ -57,7 +63,22 @@ class FMM_Transfer {
 	/**
 	 * Option used as import lock.
 	 */
-	const LOCK = 'fmm_import_lock';
+	const LOCK = 'migud_mm_import_lock';
+
+	/**
+	 * Prefix of the admin-post actions, nonces, form fields, transients and query args.
+	 */
+	const PREFIX = 'migud_mm_';
+
+	/**
+	 * Admin-post actions (without prefix) => handler.
+	 */
+	const ACTIONS = array(
+		'export'         => 'handle_export',
+		'import_preview' => 'handle_preview',
+		'import_confirm' => 'handle_confirm',
+		'import_cancel'  => 'handle_cancel',
+	);
 
 	/**
 	 * Seconds after which a lock counts as stale.
@@ -68,41 +89,68 @@ class FMM_Transfer {
 	 * Registers the admin-post handlers.
 	 */
 	public static function init() {
-		add_action( 'admin_post_fmm_export', array( __CLASS__, 'handle_export' ) );
-		add_action( 'admin_post_fmm_import_preview', array( __CLASS__, 'handle_preview' ) );
-		add_action( 'admin_post_fmm_import_confirm', array( __CLASS__, 'handle_confirm' ) );
-		add_action( 'admin_post_fmm_import_cancel', array( __CLASS__, 'handle_cancel' ) );
+		foreach ( self::ACTIONS as $action => $handler ) {
+			add_action( 'admin_post_' . self::PREFIX . $action, array( __CLASS__, $handler ) );
+			// Legacy adapter: a settings page loaded before the update still posts the former action.
+			add_action( Migud_MM_Legacy::admin_post_hook( $action ), array( __CLASS__, $handler ) );
+		}
 	}
 
 	/**
 	 * Settings page URL.
 	 *
-	 * @param string $state Value of the fmm_import query argument.
+	 * @param string $state Value of the migud_mm_import query argument.
 	 * @return string
 	 */
 	private static function page_url( $state = '' ) {
-		$url = admin_url( 'upload.php?page=' . FMM_Settings::PAGE );
+		$url = admin_url( 'upload.php?page=' . Migud_MM_Settings::PAGE );
 
-		return $state ? add_query_arg( 'fmm_import', $state, $url ) : $url;
+		return $state ? add_query_arg( self::PREFIX . 'import', $state, $url ) : $url;
 	}
 
 	/**
-	 * Capability and nonce check shared by all handlers.
+	 * Capability and nonce check shared by all handlers. The nonce must
+	 * match the prefix of the posted action, so a former form needs its
+	 * former nonce and a new form the new one. Nothing runs while the data
+	 * migration is pending.
 	 *
-	 * @param string $action Nonce action.
+	 * @param string $action Action without prefix (key of ACTIONS).
 	 */
 	private static function authorize( $action ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'fena-media-manager' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'migud-media-manager' ), '', array( 'response' => 403 ) );
 		}
 
-		check_admin_referer( $action );
+		check_admin_referer( ( Migud_MM_Legacy::admin_post_hook( $action ) === current_action() ? Migud_MM_Legacy::PREFIX : self::PREFIX ) . $action );
+
+		if ( Migud_MM_Maintenance::is_active() ) {
+			wp_die( esc_html( Migud_MM_Maintenance::message() ), '', array( 'response' => 503 ) );
+		}
+	}
+
+	/**
+	 * Sanitized POST field; the former field name is accepted as a fallback
+	 * (legacy adapter for forms rendered before the update).
+	 * Callers must have verified the nonce (authorize()).
+	 *
+	 * @param string $field  Field name without prefix.
+	 * @param string $legacy Former field name.
+	 * @return string
+	 */
+	private static function posted( $field, $legacy ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified in authorize() by every caller.
+		$name = isset( $_POST[ self::PREFIX . $field ] ) ? self::PREFIX . $field : $legacy;
+
+		$value = isset( $_POST[ $name ] ) ? sanitize_text_field( wp_unslash( $_POST[ $name ] ) ) : '';
+		// phpcs:enable
+
+		return $value;
 	}
 
 	/**
 	 * Redirects to the settings page and stops.
 	 *
-	 * @param string $state Value of the fmm_import query argument.
+	 * @param string $state Value of the migud_mm_import query argument.
 	 */
 	private static function redirect( $state ) {
 		wp_safe_redirect( self::page_url( $state ) );
@@ -116,7 +164,7 @@ class FMM_Transfer {
 	 * @return string
 	 */
 	private static function key( $name ) {
-		return 'fmm_import_' . $name . '_' . get_current_user_id();
+		return self::PREFIX . 'import_' . $name . '_' . get_current_user_id();
 	}
 
 	/**
@@ -146,7 +194,7 @@ class FMM_Transfer {
 	 * @return array
 	 */
 	public static function export_tree() {
-		$flat = FMM_Taxonomy::get_folder_tree( 'manual' );
+		$flat = Migud_MM_Taxonomy::get_folder_tree( 'manual' );
 		$pos  = 0;
 
 		return self::nest( $flat, $pos, 0 );
@@ -219,7 +267,7 @@ class FMM_Transfer {
 	 * Download of the folder structure.
 	 */
 	public static function handle_export() {
-		self::authorize( 'fmm_export' );
+		self::authorize( 'export' );
 
 		$data = array(
 			'format'  => self::FORMAT,
@@ -229,7 +277,7 @@ class FMM_Transfer {
 
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="fena-media-folders-' . wp_date( 'Y-m-d' ) . '.json"' );
+		header( 'Content-Disposition: attachment; filename="migud-media-folders-' . wp_date( 'Y-m-d' ) . '.json"' );
 		header( 'X-Content-Type-Options: nosniff' );
 		echo wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON download.
 		exit;
@@ -249,13 +297,13 @@ class FMM_Transfer {
 		if ( null === $data && JSON_ERROR_NONE !== json_last_error() ) {
 			return self::failure(
 				JSON_ERROR_DEPTH === json_last_error()
-					? __( 'The file is nested too deeply or is not valid JSON.', 'fena-media-manager' )
-					: __( 'The file is not valid JSON.', 'fena-media-manager' )
+					? __( 'The file is nested too deeply or is not valid JSON.', 'migud-media-manager' )
+					: __( 'The file is not valid JSON.', 'migud-media-manager' )
 			);
 		}
 
 		if ( ! $data instanceof stdClass ) {
-			return self::failure( __( 'The file must contain a JSON object.', 'fena-media-manager' ) );
+			return self::failure( __( 'The file must contain a JSON object.', 'migud-media-manager' ) );
 		}
 
 		$state = array(
@@ -267,29 +315,29 @@ class FMM_Transfer {
 
 		foreach ( array_keys( get_object_vars( $data ) ) as $key ) {
 			if ( ! in_array( (string) $key, array( 'format', 'version', 'folders' ), true ) ) {
-				self::add_error( $state, (string) $key, __( 'Unknown key.', 'fena-media-manager' ) );
+				self::add_error( $state, (string) $key, __( 'Unknown key.', 'migud-media-manager' ) );
 			}
 		}
 
-		if ( ! isset( $data->format ) || self::FORMAT !== $data->format ) {
+		if ( ! isset( $data->format ) || ! in_array( $data->format, array_merge( array( self::FORMAT ), self::LEGACY_FORMATS ), true ) ) {
 			/* translators: %s: format identifier. */
-			self::add_error( $state, 'format', sprintf( __( 'Must be “%s”.', 'fena-media-manager' ), self::FORMAT ) );
+			self::add_error( $state, 'format', sprintf( __( 'Must be “%s”.', 'migud-media-manager' ), self::FORMAT ) );
 		}
 		if ( ! isset( $data->version ) || ! is_int( $data->version ) || self::VERSION !== $data->version ) {
 			/* translators: %d: format version. */
-			self::add_error( $state, 'version', sprintf( __( 'Must be the integer %d.', 'fena-media-manager' ), self::VERSION ) );
+			self::add_error( $state, 'version', sprintf( __( 'Must be the integer %d.', 'migud-media-manager' ), self::VERSION ) );
 		}
 
 		$tree = array();
 		if ( ! isset( $data->folders ) || ! is_array( $data->folders ) || ! $data->folders ) {
-			self::add_error( $state, 'folders', __( 'Must be a non-empty list of folders.', 'fena-media-manager' ) );
+			self::add_error( $state, 'folders', __( 'Must be a non-empty list of folders.', 'migud-media-manager' ) );
 		} else {
 			$tree = self::walk( $data->folders, 'folders', 1, $state );
 		}
 
 		if ( $state['errors'] ) {
 			if ( $state['more'] ) {
-				$state['errors'][] = __( '…and more errors.', 'fena-media-manager' );
+				$state['errors'][] = __( '…and more errors.', 'migud-media-manager' );
 			}
 
 			return self::failure( $state['errors'] );
@@ -353,33 +401,33 @@ class FMM_Transfer {
 
 			if ( ++$state['count'] > self::MAX_FOLDERS ) {
 				/* translators: %s: maximum number of folders. */
-				self::add_error( $state, $here, sprintf( __( 'The file contains more than %s folders.', 'fena-media-manager' ), number_format_i18n( self::MAX_FOLDERS ) ) );
+				self::add_error( $state, $here, sprintf( __( 'The file contains more than %s folders.', 'migud-media-manager' ), number_format_i18n( self::MAX_FOLDERS ) ) );
 				$state['stop'] = true;
 				break;
 			}
 
 			if ( $level > self::MAX_DEPTH ) {
 				/* translators: %d: maximum depth. */
-				self::add_error( $state, $here, sprintf( __( 'Folder hierarchy is deeper than %d levels.', 'fena-media-manager' ), self::MAX_DEPTH ) );
+				self::add_error( $state, $here, sprintf( __( 'Folder hierarchy is deeper than %d levels.', 'migud-media-manager' ), self::MAX_DEPTH ) );
 				continue;
 			}
 
 			if ( ! $item instanceof stdClass ) {
-				self::add_error( $state, $here, __( 'Must be an object.', 'fena-media-manager' ) );
+				self::add_error( $state, $here, __( 'Must be an object.', 'migud-media-manager' ) );
 				continue;
 			}
 
 			foreach ( array_keys( get_object_vars( $item ) ) as $key ) {
 				if ( ! in_array( (string) $key, array( 'name', 'color', 'icon', 'children' ), true ) ) {
-					self::add_error( $state, $here . '.' . $key, __( 'Unknown key.', 'fena-media-manager' ) );
+					self::add_error( $state, $here . '.' . $key, __( 'Unknown key.', 'migud-media-manager' ) );
 				}
 			}
 
 			$name = self::validate_name( $item, $here, $state );
 			if ( null !== $name ) {
-				$lower = FMM_Taxonomy::lower( $name );
+				$lower = Migud_MM_Taxonomy::lower( $name );
 				if ( isset( $seen[ $lower ] ) ) {
-					self::add_error( $state, $here . '.name', __( 'Duplicate folder name among siblings.', 'fena-media-manager' ) );
+					self::add_error( $state, $here . '.name', __( 'Duplicate folder name among siblings.', 'migud-media-manager' ) );
 				}
 				$seen[ $lower ] = true;
 			}
@@ -390,7 +438,7 @@ class FMM_Transfer {
 			$children = array();
 			if ( property_exists( $item, 'children' ) ) {
 				if ( ! is_array( $item->children ) ) {
-					self::add_error( $state, $here . '.children', __( 'Must be a list.', 'fena-media-manager' ) );
+					self::add_error( $state, $here . '.children', __( 'Must be a list.', 'migud-media-manager' ) );
 				} else {
 					$children = self::walk( $item->children, $here . '.children', $level + 1, $state );
 				}
@@ -419,25 +467,25 @@ class FMM_Transfer {
 		$where = $path . '.name';
 
 		if ( ! isset( $item->name ) ) {
-			self::add_error( $state, $where, __( 'Required.', 'fena-media-manager' ) );
+			self::add_error( $state, $where, __( 'Required.', 'migud-media-manager' ) );
 			return null;
 		}
 
 		$name = $item->name;
 
 		if ( ! is_string( $name ) || '' === $name ) {
-			self::add_error( $state, $where, __( 'Must be a non-empty string.', 'fena-media-manager' ) );
+			self::add_error( $state, $where, __( 'Must be a non-empty string.', 'migud-media-manager' ) );
 			return null;
 		}
 
-		if ( FMM_Taxonomy::length( $name ) > FMM_Taxonomy::MAX_NAME_LENGTH ) {
+		if ( Migud_MM_Taxonomy::length( $name ) > Migud_MM_Taxonomy::MAX_NAME_LENGTH ) {
 			/* translators: %d: maximum number of characters. */
-			self::add_error( $state, $where, sprintf( __( 'Must not be longer than %d characters.', 'fena-media-manager' ), FMM_Taxonomy::MAX_NAME_LENGTH ) );
+			self::add_error( $state, $where, sprintf( __( 'Must not be longer than %d characters.', 'migud-media-manager' ), Migud_MM_Taxonomy::MAX_NAME_LENGTH ) );
 			return null;
 		}
 
 		if ( wp_specialchars_decode( sanitize_text_field( $name ), ENT_QUOTES ) !== $name ) {
-			self::add_error( $state, $where, __( 'Contains HTML, line breaks, leading or trailing spaces or other characters WordPress would change.', 'fena-media-manager' ) );
+			self::add_error( $state, $where, __( 'Contains HTML, line breaks, leading or trailing spaces or other characters WordPress would change.', 'migud-media-manager' ) );
 			return null;
 		}
 
@@ -457,11 +505,11 @@ class FMM_Transfer {
 			return '';
 		}
 
-		if ( is_string( $item->icon ) && in_array( $item->icon, FMM_Taxonomy::ICONS, true ) ) {
+		if ( is_string( $item->icon ) && in_array( $item->icon, Migud_MM_Taxonomy::ICONS, true ) ) {
 			return $item->icon;
 		}
 
-		self::add_error( $state, $path . '.icon', __( 'Must be one of image, video, document, audio, archive, star, people or tag (omit it for the default folder).', 'fena-media-manager' ) );
+		self::add_error( $state, $path . '.icon', __( 'Must be one of image, video, document, audio, archive, star, people or tag (omit it for the default folder).', 'migud-media-manager' ) );
 
 		return '';
 	}
@@ -481,11 +529,11 @@ class FMM_Transfer {
 
 		$color = $item->color;
 
-		if ( is_string( $color ) && ( in_array( $color, FMM_Taxonomy::COLOR_PRESETS, true ) || preg_match( '/^#[0-9a-f]{6}$/i', $color ) ) ) {
+		if ( is_string( $color ) && ( in_array( $color, Migud_MM_Taxonomy::COLOR_PRESETS, true ) || preg_match( '/^#[0-9a-f]{6}$/i', $color ) ) ) {
 			return strtolower( $color );
 		}
 
-		self::add_error( $state, $path . '.color', __( 'Must be blue, violet, sand, green or a #rrggbb value (omit it for gray).', 'fena-media-manager' ) );
+		self::add_error( $state, $path . '.color', __( 'Must be blue, violet, sand, green or a #rrggbb value (omit it for gray).', 'migud-media-manager' ) );
 
 		return '';
 	}
@@ -506,19 +554,19 @@ class FMM_Transfer {
 		};
 
 		if ( ! is_array( $file ) || ! isset( $file['error'], $file['tmp_name'], $file['name'] ) || is_array( $file['error'] ) || UPLOAD_ERR_NO_FILE === $file['error'] ) {
-			return $fail( __( 'Please choose a file.', 'fena-media-manager' ) );
+			return $fail( __( 'Please choose a file.', 'migud-media-manager' ) );
 		}
 
 		if ( in_array( $file['error'], array( UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ), true ) ) {
 			return $fail( self::too_large() );
 		}
 		if ( UPLOAD_ERR_OK !== $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) {
-			return $fail( __( 'The file could not be uploaded.', 'fena-media-manager' ) );
+			return $fail( __( 'The file could not be uploaded.', 'migud-media-manager' ) );
 		}
 
 		$name = sanitize_file_name( wp_unslash( (string) $file['name'] ) );
 		if ( 'json' !== strtolower( pathinfo( $name, PATHINFO_EXTENSION ) ) ) {
-			return $fail( __( 'Please choose a .json file.', 'fena-media-manager' ) );
+			return $fail( __( 'Please choose a .json file.', 'migud-media-manager' ) );
 		}
 
 		$size = filesize( $file['tmp_name'] );
@@ -526,12 +574,12 @@ class FMM_Transfer {
 			return $fail( self::too_large() );
 		}
 		if ( ! $size ) {
-			return $fail( __( 'The file is empty.', 'fena-media-manager' ) );
+			return $fail( __( 'The file is empty.', 'migud-media-manager' ) );
 		}
 
 		$json = file_get_contents( $file['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local temporary upload; never stored.
 		if ( ! is_string( $json ) ) {
-			return $fail( __( 'The file could not be read.', 'fena-media-manager' ) );
+			return $fail( __( 'The file could not be read.', 'migud-media-manager' ) );
 		}
 
 		return self::parse_content( $json, $name );
@@ -550,7 +598,7 @@ class FMM_Transfer {
 		}
 
 		if ( 1 !== preg_match( '//u', $json ) ) {
-			$result = self::failure( __( 'The file is not valid UTF-8.', 'fena-media-manager' ) );
+			$result = self::failure( __( 'The file is not valid UTF-8.', 'migud-media-manager' ) );
 		} else {
 			$result = self::parse( $json );
 		}
@@ -567,7 +615,7 @@ class FMM_Transfer {
 	 */
 	private static function too_large() {
 		/* translators: %s: maximum file size, e.g. "512 KB". */
-		return sprintf( __( 'The file is too large (maximum %s).', 'fena-media-manager' ), size_format( self::MAX_BYTES ) );
+		return sprintf( __( 'The file is too large (maximum %s).', 'migud-media-manager' ), size_format( self::MAX_BYTES ) );
 	}
 
 	// ------------------------------------------------------------------- plan.
@@ -579,14 +627,14 @@ class FMM_Transfer {
 	 * @return array { kids: array, next: array }
 	 */
 	private static function existing() {
-		$folders = FMM_Taxonomy::get_folders( 'manual' );
+		$folders = Migud_MM_Taxonomy::get_folders( 'manual' );
 		$known   = array_flip( wp_list_pluck( $folders, 'id' ) );
 		$kids    = array();
 		$next    = array();
 
 		foreach ( $folders as $folder ) {
 			$parent = isset( $known[ $folder['parent'] ] ) ? $folder['parent'] : 0;
-			$lower  = FMM_Taxonomy::lower( $folder['name'] );
+			$lower  = Migud_MM_Taxonomy::lower( $folder['name'] );
 			if ( ! isset( $kids[ $parent ][ $lower ] ) ) {
 				$kids[ $parent ][ $lower ] = $folder['id'];
 			}
@@ -617,7 +665,7 @@ class FMM_Transfer {
 			$id     = 0;
 			$status = $inherit;
 			if ( '' === $status ) {
-				$lower = FMM_Taxonomy::lower( $node['name'] );
+				$lower = Migud_MM_Taxonomy::lower( $node['name'] );
 				if ( isset( $existing['kids'][ $parent_id ][ $lower ] ) ) {
 					$id     = $existing['kids'][ $parent_id ][ $lower ];
 					$status = 'merge' === $strategy ? 'merge' : 'skip';
@@ -628,7 +676,7 @@ class FMM_Transfer {
 
 			// Nothing is added below a locked folder.
 			$locked = false;
-			if ( 'new' === $status && $parent_id && FMM_Taxonomy::is_protected( $parent_id ) ) {
+			if ( 'new' === $status && $parent_id && Migud_MM_Taxonomy::is_protected( $parent_id ) ) {
 				$status = 'skip';
 				$locked = true;
 			}
@@ -685,9 +733,11 @@ class FMM_Transfer {
 	 * Upload and validation. Writes nothing but the pending-import transient.
 	 */
 	public static function handle_preview() {
-		self::authorize( 'fmm_import_preview' );
+		self::authorize( 'import_preview' );
 
-		$file   = isset( $_FILES['fmm_import_file'] ) ? $_FILES['fmm_import_file'] : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified in authorize(); validated in read_upload().
+		// Legacy adapter: a form rendered before the update still sends the former field name.
+		$field  = isset( $_FILES[ self::PREFIX . 'import_file' ] ) ? self::PREFIX . 'import_file' : Migud_MM_Legacy::PREFIX . 'import_file'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in authorize().
+		$file   = isset( $_FILES[ $field ] ) ? $_FILES[ $field ] : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified in authorize(); validated in read_upload().
 		$result = self::read_upload( $file );
 
 		if ( null === $result['tree'] ) {
@@ -714,10 +764,10 @@ class FMM_Transfer {
 	 * Discards the pending import.
 	 */
 	public static function handle_cancel() {
-		self::authorize( 'fmm_import_cancel' );
+		self::authorize( 'import_cancel' );
 
 		delete_transient( self::key( 'pending' ) );
-		self::flash( 'info', __( 'Import cancelled. Nothing was changed.', 'fena-media-manager' ) );
+		self::flash( 'info', __( 'Import cancelled. Nothing was changed.', 'migud-media-manager' ) );
 		self::redirect( 'done' );
 	}
 
@@ -725,14 +775,14 @@ class FMM_Transfer {
 	 * Runs the pending import after confirmation.
 	 */
 	public static function handle_confirm() {
-		self::authorize( 'fmm_import_confirm' );
+		self::authorize( 'import_confirm' );
 
 		$pending  = get_transient( self::key( 'pending' ) );
-		$token    = isset( $_POST['fmm_token'] ) ? sanitize_text_field( wp_unslash( $_POST['fmm_token'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in authorize().
-		$strategy = isset( $_POST['fmm_strategy'] ) ? sanitize_key( wp_unslash( $_POST['fmm_strategy'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in authorize().
+		$token    = self::posted( 'token', Migud_MM_Legacy::PREFIX . 'token' );
+		$strategy = sanitize_key( self::posted( 'strategy', Migud_MM_Legacy::STRATEGY_FIELD ) );
 
 		if ( ! is_array( $pending ) || empty( $pending['token'] ) || '' === $token || ! hash_equals( (string) $pending['token'], $token ) || ! in_array( $strategy, array( 'merge', 'skip' ), true ) ) {
-			self::flash( 'error', __( 'The import has expired or is invalid. Nothing was changed. Please check the file again.', 'fena-media-manager' ) );
+			self::flash( 'error', __( 'The import has expired or is invalid. Nothing was changed. Please check the file again.', 'migud-media-manager' ) );
 			self::redirect( 'done' );
 		}
 
@@ -741,7 +791,7 @@ class FMM_Transfer {
 
 		// Busy: keep the checked file, the user can press "Import folders" again.
 		if ( ! self::acquire_lock() ) {
-			self::flash( 'warning', __( 'Another import is running. Your checked file is kept – you can start the import again in a moment.', 'fena-media-manager' ) );
+			self::flash( 'warning', __( 'Another import is running. Your checked file is kept – you can start the import again in a moment.', 'migud-media-manager' ) );
 			self::redirect( 'preview' );
 		}
 
@@ -759,7 +809,7 @@ class FMM_Transfer {
 		}
 
 		if ( null === $summary ) {
-			self::flash( 'error', __( 'The import has expired or is invalid. Nothing was changed. Please check the file again.', 'fena-media-manager' ) );
+			self::flash( 'error', __( 'The import has expired or is invalid. Nothing was changed. Please check the file again.', 'migud-media-manager' ) );
 			self::redirect( 'done' );
 		}
 
@@ -852,7 +902,7 @@ class FMM_Transfer {
 		} finally {
 			wp_suspend_cache_invalidation( $suspended );
 			if ( $summary['ids'] ) {
-				clean_term_cache( $summary['ids'], FMM_Taxonomy::NAME );
+				clean_term_cache( $summary['ids'], Migud_MM_Taxonomy::NAME );
 			}
 		}
 
@@ -892,20 +942,20 @@ class FMM_Transfer {
 
 		foreach ( $nodes as $position => $node ) {
 			$here  = $path . '[' . $position . ']';
-			$lower = FMM_Taxonomy::lower( $node['name'] );
+			$lower = Migud_MM_Taxonomy::lower( $node['name'] );
 			$id    = isset( $index['kids'][ $parent_id ][ $lower ] ) ? $index['kids'][ $parent_id ][ $lower ] : 0;
 
-			if ( ! $id && $parent_id && FMM_Taxonomy::is_protected( $parent_id ) ) {
+			if ( ! $id && $parent_id && Migud_MM_Taxonomy::is_protected( $parent_id ) ) {
 				// Re-checked here: the plan may be older than the request.
 				$summary['skipped'] += 1 + self::count_nodes( $node['children'] );
-				self::note_failure( $summary, $here, __( 'Not created: the parent folder is locked.', 'fena-media-manager' ) );
+				self::note_failure( $summary, $here, __( 'Not created: the parent folder is locked.', 'migud-media-manager' ) );
 				continue;
 			}
 
 			if ( ! $id ) {
 				// One transaction per folder: if the request dies between the insert and the meta writes, MySQL rolls the folder back.
 				$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control.
-				$created = wp_insert_term( $node['name'], FMM_Taxonomy::NAME, array( 'parent' => $parent_id ) );
+				$created = wp_insert_term( $node['name'], Migud_MM_Taxonomy::NAME, array( 'parent' => $parent_id ) );
 
 				if ( is_wp_error( $created ) ) {
 					$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control.
@@ -926,13 +976,13 @@ class FMM_Transfer {
 					$order                       = isset( $index['next'][ $parent_id ] ) ? $index['next'][ $parent_id ] : 0;
 					$index['next'][ $parent_id ] = $order + 1;
 
-					if ( ! update_term_meta( $id, FMM_Taxonomy::ORDER_META, $order ) ) {
+					if ( ! update_term_meta( $id, Migud_MM_Taxonomy::ORDER_META, $order ) ) {
 						++$summary['meta_failed'];
-						self::note_failure( $summary, $here, __( 'The folder was created, but its position could not be saved.', 'fena-media-manager' ) );
+						self::note_failure( $summary, $here, __( 'The folder was created, but its position could not be saved.', 'migud-media-manager' ) );
 					}
-					if ( ( '' !== $node['color'] && ! update_term_meta( $id, FMM_Taxonomy::COLOR_META, $node['color'] ) ) || ( '' !== $node['icon'] && ! update_term_meta( $id, FMM_Taxonomy::ICON_META, $node['icon'] ) ) ) {
+					if ( ( '' !== $node['color'] && ! update_term_meta( $id, Migud_MM_Taxonomy::COLOR_META, $node['color'] ) ) || ( '' !== $node['icon'] && ! update_term_meta( $id, Migud_MM_Taxonomy::ICON_META, $node['icon'] ) ) ) {
 						++$summary['meta_failed'];
-						self::note_failure( $summary, $here, __( 'The folder was created, but its color or icon could not be saved.', 'fena-media-manager' ) );
+						self::note_failure( $summary, $here, __( 'The folder was created, but its color or icon could not be saved.', 'migud-media-manager' ) );
 					}
 					$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control.
 
@@ -966,23 +1016,23 @@ class FMM_Transfer {
 		$meta   = $s['meta_failed'];
 		$lines  = $s['failure_list'];
 		if ( $s['more'] ) {
-			$lines[] = __( '…and more failures.', 'fena-media-manager' );
+			$lines[] = __( '…and more failures.', 'migud-media-manager' );
 		}
 
 		/* translators: %d: number of folders. */
-		$created = sprintf( _n( '%d folder created', '%d folders created', $s['created'], 'fena-media-manager' ), $s['created'] );
+		$created = sprintf( _n( '%d folder created', '%d folders created', $s['created'], 'migud-media-manager' ), $s['created'] );
 		/* translators: %d: number of folders. */
-		$merged = sprintf( _n( '%d existing folder reused', '%d existing folders reused', $s['merged'], 'fena-media-manager' ), $s['merged'] );
+		$merged = sprintf( _n( '%d existing folder reused', '%d existing folders reused', $s['merged'], 'migud-media-manager' ), $s['merged'] );
 		/* translators: %d: number of folders. */
-		$skipped = sprintf( _n( '%d folder skipped', '%d folders skipped', $s['skipped'], 'fena-media-manager' ), $s['skipped'] );
+		$skipped = sprintf( _n( '%d folder skipped', '%d folders skipped', $s['skipped'], 'migud-media-manager' ), $s['skipped'] );
 
 		if ( 0 === $failed && 0 === $meta && 0 === $s['created'] ) {
 			if ( 'skip' === $strategy ) {
 				/* translators: %d: number of folders. */
-				$message = sprintf( _n( 'Nothing new to import. %d folder was skipped.', 'Nothing new to import. %d folders were skipped.', $s['skipped'], 'fena-media-manager' ), $s['skipped'] );
+				$message = sprintf( _n( 'Nothing new to import. %d folder was skipped.', 'Nothing new to import. %d folders were skipped.', $s['skipped'], 'migud-media-manager' ), $s['skipped'] );
 			} else {
 				/* translators: %d: number of folders. */
-				$message = sprintf( _n( 'Nothing new to import. %d folder already existed.', 'Nothing new to import. %d folders already existed.', $s['merged'], 'fena-media-manager' ), $s['merged'] );
+				$message = sprintf( _n( 'Nothing new to import. %d folder already existed.', 'Nothing new to import. %d folders already existed.', $s['merged'], 'migud-media-manager' ), $s['merged'] );
 			}
 			self::flash( 'info', $message );
 			return;
@@ -990,33 +1040,33 @@ class FMM_Transfer {
 
 		if ( 0 === $failed && 0 === $meta ) {
 			/* translators: 1: folders created, 2: existing folders reused, 3: folders skipped. */
-			self::flash( 'success', sprintf( __( 'Import completed: %1$s, %2$s, %3$s.', 'fena-media-manager' ), $created, $merged, $skipped ) );
+			self::flash( 'success', sprintf( __( 'Import completed: %1$s, %2$s, %3$s.', 'migud-media-manager' ), $created, $merged, $skipped ) );
 			return;
 		}
 
 		$problems = array();
 		if ( $failed > 0 ) {
 			/* translators: %d: number of folders. */
-			$failed_text = sprintf( _n( '%d folder failed', '%d folders failed', $failed, 'fena-media-manager' ), $failed );
+			$failed_text = sprintf( _n( '%d folder failed', '%d folders failed', $failed, 'migud-media-manager' ), $failed );
 			/* translators: %d: number of folders. */
-			$blocked_text = sprintf( _n( '%d folder not created because its parent failed', '%d folders not created because their parent failed', $s['blocked'], 'fena-media-manager' ), $s['blocked'] );
+			$blocked_text = sprintf( _n( '%d folder not created because its parent failed', '%d folders not created because their parent failed', $s['blocked'], 'migud-media-manager' ), $s['blocked'] );
 			/* translators: 1: folders that failed, 2: folders not created because a parent failed. */
-			$problems[] = sprintf( __( 'Not imported: %1$s, %2$s.', 'fena-media-manager' ), $failed_text, $blocked_text );
+			$problems[] = sprintf( __( 'Not imported: %1$s, %2$s.', 'migud-media-manager' ), $failed_text, $blocked_text );
 		}
 		if ( $meta > 0 ) {
 			/* translators: %d: number of folders. */
-			$problems[] = sprintf( _n( '%d folder was created, but its color, icon or position could not be saved.', '%d folders were created, but their color, icon or position could not be saved.', $meta, 'fena-media-manager' ), $meta );
+			$problems[] = sprintf( _n( '%d folder was created, but its color, icon or position could not be saved.', '%d folders were created, but their color, icon or position could not be saved.', $meta, 'migud-media-manager' ), $meta );
 		}
 		$problem_text = implode( ' ', $problems );
 
 		if ( 0 === $s['created'] + $s['merged'] && $failed > 0 ) {
 			/* translators: %s: failure summary. */
-			self::flash( 'error', sprintf( __( 'Import failed: nothing was imported. %s', 'fena-media-manager' ), $problem_text ), $lines );
+			self::flash( 'error', sprintf( __( 'Import failed: nothing was imported. %s', 'migud-media-manager' ), $problem_text ), $lines );
 			return;
 		}
 
 		/* translators: 1: folders created, 2: existing folders reused, 3: folders skipped, 4: problem summary. */
-		self::flash( 'warning', sprintf( __( 'Import partially completed: %1$s, %2$s, %3$s. %4$s', 'fena-media-manager' ), $created, $merged, $skipped, $problem_text ), $lines );
+		self::flash( 'warning', sprintf( __( 'Import partially completed: %1$s, %2$s, %3$s. %4$s', 'migud-media-manager' ), $created, $merged, $skipped, $problem_text ), $lines );
 	}
 
 	// --------------------------------------------------------------- rendering.
@@ -1025,29 +1075,29 @@ class FMM_Transfer {
 	 * Renders the Import / Export section of the settings page.
 	 */
 	public static function render_section() {
-		$state = isset( $_GET['fmm_import'] ) ? sanitize_key( wp_unslash( $_GET['fmm_import'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display only.
+		$state = isset( $_GET[ self::PREFIX . 'import' ] ) ? sanitize_key( wp_unslash( $_GET[ self::PREFIX . 'import' ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display only.
 		$admin = admin_url( 'admin-post.php' );
 		?>
-		<section class="fmm-card fmm-transfer" aria-labelledby="fmm-settings-transfer">
-			<h2 id="fmm-settings-transfer"><?php esc_html_e( 'Import / Export', 'fena-media-manager' ); ?></h2>
+		<section class="migud-mm-card migud-mm-transfer" aria-labelledby="migud-mm-settings-transfer">
+			<h2 id="migud-mm-settings-transfer"><?php esc_html_e( 'Import / Export', 'migud-media-manager' ); ?></h2>
 
 			<?php self::render_notices( $state ); ?>
 
-			<div class="fmm-field">
-				<div class="fmm-field__label"><?php esc_html_e( 'Export', 'fena-media-manager' ); ?></div>
-				<div class="fmm-field__control">
+			<div class="migud-mm-field">
+				<div class="migud-mm-field__label"><?php esc_html_e( 'Export', 'migud-media-manager' ); ?></div>
+				<div class="migud-mm-field__control">
 					<form method="post" action="<?php echo esc_url( $admin ); ?>">
-						<input type="hidden" name="action" value="fmm_export" />
-						<?php wp_nonce_field( 'fmm_export' ); ?>
-						<p class="fmm-field__help" id="fmm-export-help"><?php esc_html_e( 'Downloads the folder structure (names, colors, icons, hierarchy and manual order) as a JSON file. Media files, assignments and settings are not exported.', 'fena-media-manager' ); ?></p>
-						<button type="submit" class="button" aria-describedby="fmm-export-help"><?php esc_html_e( 'Export folders', 'fena-media-manager' ); ?></button>
+						<input type="hidden" name="action" value="<?php echo esc_attr( self::PREFIX . 'export' ); ?>" />
+						<?php wp_nonce_field( self::PREFIX . 'export' ); ?>
+						<p class="migud-mm-field__help" id="migud-mm-export-help"><?php esc_html_e( 'Downloads the folder structure (names, colors, icons, hierarchy and manual order) as a JSON file. Media files, assignments and settings are not exported.', 'migud-media-manager' ); ?></p>
+						<button type="submit" class="button" aria-describedby="migud-mm-export-help"><?php esc_html_e( 'Export folders', 'migud-media-manager' ); ?></button>
 					</form>
 					<?php if ( self::export_exceeds_limits() ) : ?>
-						<p class="fmm-field__warning">
+						<p class="migud-mm-field__warning">
 							<?php
 							printf(
 								/* translators: 1: maximum folders, 2: maximum levels. */
-								esc_html__( 'Your folder structure is larger than the import limits (%1$s folders, %2$d levels). The export works, but importing the file will be rejected.', 'fena-media-manager' ),
+								esc_html__( 'Your folder structure is larger than the import limits (%1$s folders, %2$d levels). The export works, but importing the file will be rejected.', 'migud-media-manager' ),
 								esc_html( number_format_i18n( self::MAX_FOLDERS ) ),
 								(int) self::MAX_DEPTH
 							);
@@ -1057,25 +1107,25 @@ class FMM_Transfer {
 				</div>
 			</div>
 
-			<div class="fmm-field">
-				<div class="fmm-field__label"><label for="fmm-import-file"><?php esc_html_e( 'Folder structure file (.json)', 'fena-media-manager' ); ?></label></div>
-				<div class="fmm-field__control">
+			<div class="migud-mm-field">
+				<div class="migud-mm-field__label"><label for="migud-mm-import-file"><?php esc_html_e( 'Folder structure file (.json)', 'migud-media-manager' ); ?></label></div>
+				<div class="migud-mm-field__control">
 					<form method="post" action="<?php echo esc_url( $admin ); ?>" enctype="multipart/form-data">
-						<input type="hidden" name="action" value="fmm_import_preview" />
-						<?php wp_nonce_field( 'fmm_import_preview' ); ?>
-						<input type="file" id="fmm-import-file" name="fmm_import_file" accept=".json,application/json" aria-describedby="fmm-import-help" required />
-						<p class="fmm-field__help" id="fmm-import-help">
+						<input type="hidden" name="action" value="<?php echo esc_attr( self::PREFIX . 'import_preview' ); ?>" />
+						<?php wp_nonce_field( self::PREFIX . 'import_preview' ); ?>
+						<input type="file" id="migud-mm-import-file" name="<?php echo esc_attr( self::PREFIX . 'import_file' ); ?>" accept=".json,application/json" aria-describedby="migud-mm-import-help" required />
+						<p class="migud-mm-field__help" id="migud-mm-import-help">
 							<?php
 							printf(
 								/* translators: 1: maximum file size, 2: maximum folders, 3: maximum levels. */
-								esc_html__( 'Maximum %1$s, %2$s folders, %3$d levels. Media files and media assignments are not transferred. Existing folders are not changed. You can review the result before anything is imported.', 'fena-media-manager' ),
+								esc_html__( 'Maximum %1$s, %2$s folders, %3$d levels. Media files and media assignments are not transferred. Existing folders are not changed. You can review the result before anything is imported.', 'migud-media-manager' ),
 								esc_html( size_format( self::MAX_BYTES ) ),
 								esc_html( number_format_i18n( self::MAX_FOLDERS ) ),
 								(int) self::MAX_DEPTH
 							);
 							?>
 						</p>
-						<button type="submit" class="button"><?php esc_html_e( 'Check file', 'fena-media-manager' ); ?></button>
+						<button type="submit" class="button"><?php esc_html_e( 'Check file', 'migud-media-manager' ); ?></button>
 					</form>
 				</div>
 			</div>
@@ -1092,7 +1142,7 @@ class FMM_Transfer {
 	/**
 	 * Renders the one-time notices (errors, results).
 	 *
-	 * @param string $state Value of the fmm_import query argument.
+	 * @param string $state Value of the migud_mm_import query argument.
 	 */
 	private static function render_notices( $state ) {
 		if ( 'invalid' === $state ) {
@@ -1100,8 +1150,8 @@ class FMM_Transfer {
 			delete_transient( self::key( 'errors' ) );
 			if ( is_array( $errors ) && $errors ) {
 				?>
-				<div class="notice notice-error inline fmm-notice" role="alert">
-					<p><strong><?php esc_html_e( 'The file cannot be imported. Nothing was changed.', 'fena-media-manager' ); ?></strong></p>
+				<div class="notice notice-error inline migud-mm-notice" role="alert">
+					<p><strong><?php esc_html_e( 'The file cannot be imported. Nothing was changed.', 'migud-media-manager' ); ?></strong></p>
 					<ul>
 						<?php foreach ( $errors as $error ) : ?>
 							<li><?php echo esc_html( $error ); ?></li>
@@ -1118,7 +1168,7 @@ class FMM_Transfer {
 		if ( is_array( $result ) && isset( $result['type'], $result['message'] ) ) {
 			$type = in_array( $result['type'], array( 'success', 'warning', 'error', 'info' ), true ) ? $result['type'] : 'info';
 			?>
-			<div class="notice notice-<?php echo esc_attr( $type ); ?> inline fmm-notice" role="<?php echo esc_attr( in_array( $type, array( 'error', 'warning' ), true ) ? 'alert' : 'status' ); ?>">
+			<div class="notice notice-<?php echo esc_attr( $type ); ?> inline migud-mm-notice" role="<?php echo esc_attr( in_array( $type, array( 'error', 'warning' ), true ) ? 'alert' : 'status' ); ?>">
 				<p><?php echo esc_html( $result['message'] ); ?></p>
 				<?php if ( ! empty( $result['lines'] ) ) : ?>
 					<ul>
@@ -1133,7 +1183,7 @@ class FMM_Transfer {
 			$lock = get_option( self::LOCK );
 			if ( false !== $lock && time() - (int) $lock <= self::LOCK_TTL ) {
 				?>
-				<div class="notice notice-info inline fmm-notice" role="status"><p><?php esc_html_e( 'An import is currently running. Reload this page in a moment to see the result.', 'fena-media-manager' ); ?></p></div>
+				<div class="notice notice-info inline migud-mm-notice" role="status"><p><?php esc_html_e( 'An import is currently running. Reload this page in a moment to see the result.', 'migud-media-manager' ); ?></p></div>
 				<?php
 			}
 		}
@@ -1147,7 +1197,7 @@ class FMM_Transfer {
 	 */
 	private static function new_text( $n ) {
 		/* translators: %d: number of folders. */
-		return sprintf( _n( '%d new folder', '%d new folders', $n, 'fena-media-manager' ), $n );
+		return sprintf( _n( '%d new folder', '%d new folders', $n, 'migud-media-manager' ), $n );
 	}
 
 	/**
@@ -1158,7 +1208,7 @@ class FMM_Transfer {
 	 */
 	private static function reused_text( $n ) {
 		/* translators: %d: number of folders. */
-		return sprintf( _n( '%d existing folder reused', '%d existing folders reused', $n, 'fena-media-manager' ), $n );
+		return sprintf( _n( '%d existing folder reused', '%d existing folders reused', $n, 'migud-media-manager' ), $n );
 	}
 
 	/**
@@ -1169,7 +1219,7 @@ class FMM_Transfer {
 	 */
 	private static function skipped_text( $n ) {
 		/* translators: %d: number of folders. */
-		return sprintf( _n( '%d folder skipped including subfolders', '%d folders skipped including subfolders', $n, 'fena-media-manager' ), $n );
+		return sprintf( _n( '%d folder skipped including subfolders', '%d folders skipped including subfolders', $n, 'migud-media-manager' ), $n );
 	}
 
 	/**
@@ -1180,7 +1230,7 @@ class FMM_Transfer {
 
 		if ( ! is_array( $pending ) || empty( $pending['tree'] ) ) {
 			?>
-			<div class="notice notice-warning inline fmm-notice" role="alert"><p><?php esc_html_e( 'The import preview has expired. Please check the file again.', 'fena-media-manager' ); ?></p></div>
+			<div class="notice notice-warning inline migud-mm-notice" role="alert"><p><?php esc_html_e( 'The import preview has expired. Please check the file again.', 'migud-media-manager' ); ?></p></div>
 			<?php
 			return;
 		}
@@ -1192,50 +1242,50 @@ class FMM_Transfer {
 		$ts       = self::tally( $skip );
 		$admin    = admin_url( 'admin-post.php' );
 		?>
-		<div class="fmm-preview" data-strategy="merge">
-			<h3 id="fmm-preview-title">
+		<div class="migud-mm-preview" data-strategy="merge">
+			<h3 id="migud-mm-preview-title">
 				<?php
 				/* translators: %s: file name. */
-				echo esc_html( sprintf( __( 'Preview: %s', 'fena-media-manager' ), $pending['filename'] ) );
+				echo esc_html( sprintf( __( 'Preview: %s', 'migud-media-manager' ), $pending['filename'] ) );
 				?>
 			</h3>
-			<p class="fmm-preview__summary">
-				<strong><?php esc_html_e( 'Merge:', 'fena-media-manager' ); ?></strong>
+			<p class="migud-mm-preview__summary">
+				<strong><?php esc_html_e( 'Merge:', 'migud-media-manager' ); ?></strong>
 				<?php echo esc_html( self::new_text( $tm['new'] ) . ', ' . self::reused_text( $tm['merge'] ) ); ?>
 			</p>
-			<p class="fmm-preview__summary">
-				<strong><?php esc_html_e( 'Skip:', 'fena-media-manager' ); ?></strong>
+			<p class="migud-mm-preview__summary">
+				<strong><?php esc_html_e( 'Skip:', 'migud-media-manager' ); ?></strong>
 				<?php echo esc_html( self::new_text( $ts['new'] ) . ', ' . self::skipped_text( $ts['skip'] ) ); ?>
 			</p>
-			<p class="fmm-field__help"><?php esc_html_e( 'Media files and media assignments are not transferred. Existing folders are not changed or deleted.', 'fena-media-manager' ); ?></p>
+			<p class="migud-mm-field__help"><?php esc_html_e( 'Media files and media assignments are not transferred. Existing folders are not changed or deleted.', 'migud-media-manager' ); ?></p>
 
-			<ul class="fmm-legend" aria-label="<?php esc_attr_e( 'Legend', 'fena-media-manager' ); ?>">
-				<li><span class="fmm-badge fmm-badge--new"><?php esc_html_e( 'New', 'fena-media-manager' ); ?></span> <?php esc_html_e( 'The folder will be created.', 'fena-media-manager' ); ?></li>
-				<li><span class="fmm-badge fmm-badge--merge"><?php esc_html_e( 'Already exists – will be merged', 'fena-media-manager' ); ?></span> <?php esc_html_e( 'The existing folder is reused; only missing subfolders are added.', 'fena-media-manager' ); ?></li>
-				<li><span class="fmm-badge fmm-badge--skip"><?php esc_html_e( 'Skipped', 'fena-media-manager' ); ?></span> <?php esc_html_e( 'Nothing is created for this folder and its subfolders.', 'fena-media-manager' ); ?></li>
+			<ul class="migud-mm-legend" aria-label="<?php esc_attr_e( 'Legend', 'migud-media-manager' ); ?>">
+				<li><span class="migud-mm-badge migud-mm-badge--new"><?php esc_html_e( 'New', 'migud-media-manager' ); ?></span> <?php esc_html_e( 'The folder will be created.', 'migud-media-manager' ); ?></li>
+				<li><span class="migud-mm-badge migud-mm-badge--merge"><?php esc_html_e( 'Already exists – will be merged', 'migud-media-manager' ); ?></span> <?php esc_html_e( 'The existing folder is reused; only missing subfolders are added.', 'migud-media-manager' ); ?></li>
+				<li><span class="migud-mm-badge migud-mm-badge--skip"><?php esc_html_e( 'Skipped', 'migud-media-manager' ); ?></span> <?php esc_html_e( 'Nothing is created for this folder and its subfolders.', 'migud-media-manager' ); ?></li>
 			</ul>
 
-			<div class="fmm-preview__actions">
+			<div class="migud-mm-preview__actions">
 				<form method="post" action="<?php echo esc_url( $admin ); ?>">
-					<input type="hidden" name="action" value="fmm_import_confirm" />
-					<input type="hidden" name="fmm_token" value="<?php echo esc_attr( $pending['token'] ); ?>" />
-					<?php wp_nonce_field( 'fmm_import_confirm' ); ?>
-					<fieldset class="fmm-preview__strategy">
-						<legend><?php esc_html_e( 'If a folder already exists', 'fena-media-manager' ); ?></legend>
-						<label class="fmm-choice"><input type="radio" name="fmm_strategy" value="merge" checked="checked" /> <?php esc_html_e( 'Merge: reuse it and add missing subfolders', 'fena-media-manager' ); ?></label>
-						<label class="fmm-choice"><input type="radio" name="fmm_strategy" value="skip" /> <?php esc_html_e( 'Skip: leave it and its subfolders out', 'fena-media-manager' ); ?></label>
+					<input type="hidden" name="action" value="<?php echo esc_attr( self::PREFIX . 'import_confirm' ); ?>" />
+					<input type="hidden" name="<?php echo esc_attr( self::PREFIX . 'token' ); ?>" value="<?php echo esc_attr( $pending['token'] ); ?>" />
+					<?php wp_nonce_field( self::PREFIX . 'import_confirm' ); ?>
+					<fieldset class="migud-mm-preview__strategy">
+						<legend><?php esc_html_e( 'If a folder already exists', 'migud-media-manager' ); ?></legend>
+						<label class="migud-mm-choice"><input type="radio" name="<?php echo esc_attr( self::PREFIX . 'strategy' ); ?>" value="merge" checked="checked" /> <?php esc_html_e( 'Merge: reuse it and add missing subfolders', 'migud-media-manager' ); ?></label>
+						<label class="migud-mm-choice"><input type="radio" name="<?php echo esc_attr( self::PREFIX . 'strategy' ); ?>" value="skip" /> <?php esc_html_e( 'Skip: leave it and its subfolders out', 'migud-media-manager' ); ?></label>
 					</fieldset>
-					<noscript><p class="fmm-field__help"><?php esc_html_e( 'The statuses below show the merge result; the skip result is calculated when you import.', 'fena-media-manager' ); ?></p></noscript>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Import folders', 'fena-media-manager' ); ?></button>
+					<noscript><p class="migud-mm-field__help"><?php esc_html_e( 'The statuses below show the merge result; the skip result is calculated when you import.', 'migud-media-manager' ); ?></p></noscript>
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Import folders', 'migud-media-manager' ); ?></button>
 				</form>
 				<form method="post" action="<?php echo esc_url( $admin ); ?>">
-					<input type="hidden" name="action" value="fmm_import_cancel" />
-					<?php wp_nonce_field( 'fmm_import_cancel' ); ?>
-					<button type="submit" class="button"><?php esc_html_e( 'Cancel', 'fena-media-manager' ); ?></button>
+					<input type="hidden" name="action" value="<?php echo esc_attr( self::PREFIX . 'import_cancel' ); ?>" />
+					<?php wp_nonce_field( self::PREFIX . 'import_cancel' ); ?>
+					<button type="submit" class="button"><?php esc_html_e( 'Cancel', 'migud-media-manager' ); ?></button>
 				</form>
 			</div>
 
-			<div role="region" aria-labelledby="fmm-preview-title" class="fmm-preview__tree" tabindex="0">
+			<div role="region" aria-labelledby="migud-mm-preview-title" class="migud-mm-preview__tree" tabindex="0">
 				<?php self::render_plan( $merge, $skip ); ?>
 			</div>
 		</div>
@@ -1250,14 +1300,14 @@ class FMM_Transfer {
 	 */
 	private static function icon_label( $key ) {
 		$labels = array(
-			'image'    => __( 'Image', 'fena-media-manager' ),
-			'video'    => __( 'Video', 'fena-media-manager' ),
-			'document' => __( 'Document', 'fena-media-manager' ),
-			'audio'    => __( 'Audio', 'fena-media-manager' ),
-			'archive'  => __( 'Archive', 'fena-media-manager' ),
-			'star'     => __( 'Star', 'fena-media-manager' ),
-			'people'   => __( 'People', 'fena-media-manager' ),
-			'tag'      => __( 'Tag', 'fena-media-manager' ),
+			'image'    => __( 'Image', 'migud-media-manager' ),
+			'video'    => __( 'Video', 'migud-media-manager' ),
+			'document' => __( 'Document', 'migud-media-manager' ),
+			'audio'    => __( 'Audio', 'migud-media-manager' ),
+			'archive'  => __( 'Archive', 'migud-media-manager' ),
+			'star'     => __( 'Star', 'migud-media-manager' ),
+			'people'   => __( 'People', 'migud-media-manager' ),
+			'tag'      => __( 'Tag', 'migud-media-manager' ),
 		);
 
 		return isset( $labels[ $key ] ) ? $labels[ $key ] : $key;
@@ -1271,28 +1321,28 @@ class FMM_Transfer {
 	 */
 	private static function render_plan( $merge, $skip ) {
 		$labels = array(
-			'new'   => __( 'New', 'fena-media-manager' ),
-			'merge' => __( 'Already exists – will be merged', 'fena-media-manager' ),
-			'skip'  => __( 'Skipped', 'fena-media-manager' ),
+			'new'   => __( 'New', 'migud-media-manager' ),
+			'merge' => __( 'Already exists – will be merged', 'migud-media-manager' ),
+			'skip'  => __( 'Skipped', 'migud-media-manager' ),
 		);
 
-		echo '<ul class="fmm-tree">';
+		echo '<ul class="migud-mm-tree">';
 		foreach ( $merge as $i => $node ) {
 			$other = $skip[ $i ];
-			echo '<li><span class="fmm-tree__row">';
+			echo '<li><span class="migud-mm-tree__row">';
 			if ( preg_match( '/^#[0-9a-f]{6}$/', $node['color'] ) ) {
-				echo '<span class="fmm-swatch" aria-hidden="true" style="--fmm-folder-color:' . esc_attr( $node['color'] ) . '"></span>';
+				echo '<span class="migud-mm-swatch" aria-hidden="true" style="--migud-mm-folder-color:' . esc_attr( $node['color'] ) . '"></span>';
 			} else {
-				echo '<span class="fmm-swatch" aria-hidden="true"' . ( '' !== $node['color'] ? ' data-fmm-color="' . esc_attr( $node['color'] ) . '"' : '' ) . '></span>';
+				echo '<span class="migud-mm-swatch" aria-hidden="true"' . ( '' !== $node['color'] ? ' data-migud-mm-color="' . esc_attr( $node['color'] ) . '"' : '' ) . '></span>';
 			}
-			echo '<span class="fmm-tree__name">' . esc_html( $node['name'] ) . '</span> ';
+			echo '<span class="migud-mm-tree__name">' . esc_html( $node['name'] ) . '</span> ';
 			if ( '' !== $node['icon'] ) {
-				echo '<span class="fmm-tree__icon">· ' . esc_html( self::icon_label( $node['icon'] ) ) . '</span> ';
+				echo '<span class="migud-mm-tree__icon">· ' . esc_html( self::icon_label( $node['icon'] ) ) . '</span> ';
 			}
-			echo '<span class="fmm-badge fmm-badge--' . esc_attr( $node['status'] ) . '" data-view="merge">' . esc_html( $labels[ $node['status'] ] ) . '</span>';
-			echo '<span class="fmm-badge fmm-badge--' . esc_attr( $other['status'] ) . '" data-view="skip" hidden>' . esc_html( $labels[ $other['status'] ] ) . '</span>';
+			echo '<span class="migud-mm-badge migud-mm-badge--' . esc_attr( $node['status'] ) . '" data-view="merge">' . esc_html( $labels[ $node['status'] ] ) . '</span>';
+			echo '<span class="migud-mm-badge migud-mm-badge--' . esc_attr( $other['status'] ) . '" data-view="skip" hidden>' . esc_html( $labels[ $other['status'] ] ) . '</span>';
 			if ( ! empty( $node['locked'] ) ) {
-				echo ' <span class="fmm-tree__icon">' . esc_html__( '· Locked folder: nothing is added below it.', 'fena-media-manager' ) . '</span>';
+				echo ' <span class="migud-mm-tree__icon">' . esc_html__( '· Locked folder: nothing is added below it.', 'migud-media-manager' ) . '</span>';
 			}
 			echo '</span>';
 			if ( $node['children'] ) {

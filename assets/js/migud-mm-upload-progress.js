@@ -1,11 +1,11 @@
 /**
- * Fena Media Manager: upload progress panel of the media library grid (upload.php).
+ * MIGUD Media Manager: upload progress panel of the media library grid (upload.php).
  *
  * Listen-only: it follows the events of `wp.Uploader.queue` and `wp.Uploader.errors`
  * (core wp-plupload.js) and shows the progress; it never uploads, retries or sends
  * a request itself.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */
 
 ( function( $, _, wp ) {
@@ -19,14 +19,14 @@
 	var _n = wp.i18n._n;
 	var sprintf = wp.i18n.sprintf;
 	var SVG_NS = 'http://www.w3.org/2000/svg';
-	var LIST_ID = 'fmm-upload-list';
+	var LIST_ID = 'migud-mm-upload-list';
 	var started = false;
 
 	function iconEl( href ) {
 		var svg = document.createElementNS( SVG_NS, 'svg' );
 		var use = document.createElementNS( SVG_NS, 'use' );
 
-		svg.setAttribute( 'class', 'fmm-icon' );
+		svg.setAttribute( 'class', 'migud-mm-icon' );
 		svg.setAttribute( 'aria-hidden', 'true' );
 		svg.setAttribute( 'focusable', 'false' );
 		use.setAttribute( 'href', '#' + href );
@@ -142,85 +142,85 @@
 			if ( ! isDone ) {
 				return sprintf(
 					/* translators: 1: current file number, 2: number of files, 3: overall percentage. */
-					_n( 'Uploading %1$d of %2$d file – %3$d %%', 'Uploading %1$d of %2$d files – %3$d %%', t.total, 'fena-media-manager' ),
+					_n( 'Uploading %1$d of %2$d file – %3$d %%', 'Uploading %1$d of %2$d files – %3$d %%', t.total, 'migud-media-manager' ),
 					Math.min( t.done + t.failed + 1, t.total ), t.total, percent
 				);
 			}
 			if ( t.failed ) {
 				return sprintf(
 					/* translators: 1: number of uploaded files, 2: number of files, 3: number of failed files. */
-					_n( '%1$d of %2$d file uploaded, %3$d failed', '%1$d of %2$d files uploaded, %3$d failed', t.total, 'fena-media-manager' ),
+					_n( '%1$d of %2$d file uploaded, %3$d failed', '%1$d of %2$d files uploaded, %3$d failed', t.total, 'migud-media-manager' ),
 					t.done, t.total, t.failed
 				);
 			}
 
 			return sprintf(
 				/* translators: 1: number of uploaded files, 2: number of files. */
-				_n( '%1$d/%2$d file uploaded – 100 %%', '%1$d/%2$d files uploaded – 100 %%', t.total, 'fena-media-manager' ),
+				_n( '%1$d/%2$d file uploaded – 100 %%', '%1$d/%2$d files uploaded – 100 %%', t.total, 'migud-media-manager' ),
 				t.done, t.total
 			);
 		}
 
 		function buildPanel() {
-			panel = $( '<section class="fmm fmm-upload" role="region"></section>' ).attr( 'aria-label', __( 'Upload progress', 'fena-media-manager' ) ).append(
-				$( '<div class="fmm-upload__header"></div>' ).append(
-					$( '<span class="fmm-upload__status-icon"></span>' ),
-					$( '<div class="fmm-upload__heading"></div>' ).append(
-						$( '<p class="fmm-upload__title"></p>' ),
-						$( '<p class="fmm-upload__subtitle"></p>' )
+			panel = $( '<section class="migud-mm migud-mm-upload" role="region"></section>' ).attr( 'aria-label', __( 'Upload progress', 'migud-media-manager' ) ).append(
+				$( '<div class="migud-mm-upload__header"></div>' ).append(
+					$( '<span class="migud-mm-upload__status-icon"></span>' ),
+					$( '<div class="migud-mm-upload__heading"></div>' ).append(
+						$( '<p class="migud-mm-upload__title"></p>' ),
+						$( '<p class="migud-mm-upload__subtitle"></p>' )
 					),
-					$( '<button type="button" class="fmm-upload__toggle"></button>' ).attr( 'aria-controls', LIST_ID ).on( 'click', function() {
+					$( '<button type="button" class="migud-mm-upload__toggle"></button>' ).attr( 'aria-controls', LIST_ID ).on( 'click', function() {
 						collapsed = ! collapsed;
 						render();
 					} ),
-					$( '<button type="button" class="fmm-upload__close"></button>' ).attr( { 'aria-label': __( 'Close', 'fena-media-manager' ), title: __( 'Close', 'fena-media-manager' ) } ).append( iconEl( 'fmm-i-x-mark' ) ).on( 'click', closePanel )
+					$( '<button type="button" class="migud-mm-upload__close"></button>' ).attr( { 'aria-label': __( 'Close', 'migud-media-manager' ), title: __( 'Close', 'migud-media-manager' ) } ).append( iconEl( 'migud-mm-i-x-mark' ) ).on( 'click', closePanel )
 				),
-				$( '<ul class="fmm-upload__list"></ul>' ).attr( 'id', LIST_ID )
+				$( '<ul class="migud-mm-upload__list"></ul>' ).attr( 'id', LIST_ID )
 			).appendTo( document.body );
 		}
 
 		function fileIcon( entry ) {
-			return /^image\//.test( entry.type ) || /\.(jpe?g|png|gif|webp|avif|heic|bmp|svg|ico)$/i.test( entry.name ) ? 'fmm-i-photo' : 'fmm-g-document';
+			return /^image\//.test( entry.type ) || /\.(jpe?g|png|gif|webp|avif|heic|bmp|svg|ico)$/i.test( entry.name ) ? 'migud-mm-i-photo' : 'migud-mm-g-document';
 		}
 
 		function renderRow( entry ) {
-			var $row = panel.find( '.fmm-upload__item[data-id="' + entry.id + '"]' );
+			var $row = panel.find( '.migud-mm-upload__item[data-id="' + entry.id + '"]' );
 			var $bar, status, statusClass, full;
 
 			if ( ! $row.length ) {
-				$row = $( '<li class="fmm-upload__item"></li>' ).attr( 'data-id', entry.id ).append(
-					$( '<div class="fmm-upload__row"></div>' ).append(
-						$( '<span class="fmm-upload__file-icon"></span>' ).append( iconEl( fileIcon( entry ) ) ),
-						$( '<span class="fmm-upload__name"></span>' ).text( entry.name ).attr( 'title', entry.name ),
-						$( '<span class="fmm-upload__size"></span>' ),
-						$( '<span class="fmm-upload__state"></span>' )
+				$row = $( '<li class="migud-mm-upload__item"></li>' ).attr( 'data-id', entry.id ).append(
+					$( '<div class="migud-mm-upload__row"></div>' ).append(
+						$( '<span class="migud-mm-upload__file-icon"></span>' ).append( iconEl( fileIcon( entry ) ) ),
+						$( '<span class="migud-mm-upload__name"></span>' ).text( entry.name ).attr( 'title', entry.name ),
+						$( '<span class="migud-mm-upload__size"></span>' ),
+						$( '<span class="migud-mm-upload__state"></span>' )
 					),
-					$( '<div class="fmm-upload__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span class="fmm-upload__fill"></span></div>' ).attr( 'aria-label', entry.name ),
-					$( '<p class="fmm-upload__message"></p>' )
-				).appendTo( panel.find( '.fmm-upload__list' ) );
+					$( '<div class="migud-mm-upload__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><span class="migud-mm-upload__fill"></span></div>' ).attr( 'aria-label', entry.name ),
+					$( '<p class="migud-mm-upload__message"></p>' )
+				).appendTo( panel.find( '.migud-mm-upload__list' ) );
 			}
 
-			status = { uploading: Math.min( entry.percent, 100 ) + ' %', processing: __( 'Processing…', 'fena-media-manager' ), done: __( 'Completed', 'fena-media-manager' ), error: __( 'Failed', 'fena-media-manager' ) }[ entry.state ];
+			status = { uploading: Math.min( entry.percent, 100 ) + ' %', processing: __( 'Processing…', 'migud-media-manager' ), done: __( 'Completed', 'migud-media-manager' ), error: __( 'Failed', 'migud-media-manager' ) }[ entry.state ];
 			full = 'processing' === entry.state || 'done' === entry.state;
 			statusClass = 'is-' + entry.state;
-			$bar = $row.find( '.fmm-upload__bar' );
+			$bar = $row.find( '.migud-mm-upload__bar' );
 
 			$row.attr( 'data-state', entry.state );
-			$row.find( '.fmm-upload__size' ).text( entry.size ? formatBytes( entry.size ) : '' );
-			$row.find( '.fmm-upload__state' ).attr( 'class', 'fmm-upload__state ' + statusClass ).text( status );
-			$bar.prop( 'hidden', 'error' === entry.state ).find( '.fmm-upload__fill' ).css( 'width', ( full ? 100 : Math.min( entry.percent, 100 ) ) + '%' );
+			$row.find( '.migud-mm-upload__size' ).text( entry.size ? formatBytes( entry.size ) : '' );
+			$row.find( '.migud-mm-upload__state' ).attr( 'class', 'migud-mm-upload__state ' + statusClass ).text( status );
+			$bar.prop( 'hidden', 'error' === entry.state ).find( '.migud-mm-upload__fill' ).css( 'width', ( full ? 100 : Math.min( entry.percent, 100 ) ) + '%' );
 			if ( 'processing' === entry.state ) {
-				$bar.removeAttr( 'aria-valuenow' ).attr( 'aria-valuetext', __( 'Processing…', 'fena-media-manager' ) );
+				$bar.removeAttr( 'aria-valuenow' ).attr( 'aria-valuetext', __( 'Processing…', 'migud-media-manager' ) );
 			} else {
 				$bar.removeAttr( 'aria-valuetext' ).attr( 'aria-valuenow', full ? 100 : Math.min( entry.percent, 100 ) );
 			}
-			$row.find( '.fmm-upload__message' ).toggleClass( 'is-error', 'error' === entry.state ).text( entry.message || entry.note || '' ).prop( 'hidden', ! ( entry.message || entry.note ) );
+			$row.find( '.migud-mm-upload__message' ).toggleClass( 'is-error', 'error' === entry.state ).text( entry.message || entry.note || '' ).prop( 'hidden', ! ( entry.message || entry.note ) );
 		}
 
 		function render() {
 			var t = totals();
 			var isDone = finished();
-			var iconName = ! isDone ? 'fmm-i-arrow-up-tray' : ( t.failed ? 'fmm-i-exclamation-circle' : 'fmm-i-check' );
+			var iconName = ! isDone ? 'migud-mm-i-arrow-up-tray' : ( t.failed ? 'migud-mm-i-exclamation-circle' : 'migud-mm-i-check' );
 			var label;
 
 			frame = 0;
@@ -234,22 +234,22 @@
 				announced = true;
 				speak( sprintf(
 					/* translators: %d: number of files. */
-					_n( 'Uploading %d file.', 'Uploading %d files.', order.length, 'fena-media-manager' ), order.length
+					_n( 'Uploading %d file.', 'Uploading %d files.', order.length, 'migud-media-manager' ), order.length
 				) );
 			}
 
 			panel.attr( 'data-state', ! isDone ? 'uploading' : ( t.failed ? 'error' : 'done' ) ).toggleClass( 'is-collapsed', collapsed && ! isDone );
-			panel.find( '.fmm-upload__status-icon' ).empty().append( iconEl( iconName ) );
-			panel.find( '.fmm-upload__title' ).text( title( t, isDone ) );
-			panel.find( '.fmm-upload__subtitle' ).text( null === t.percent || ! t.size ? '' : sprintf(
+			panel.find( '.migud-mm-upload__status-icon' ).empty().append( iconEl( iconName ) );
+			panel.find( '.migud-mm-upload__title' ).text( title( t, isDone ) );
+			panel.find( '.migud-mm-upload__subtitle' ).text( null === t.percent || ! t.size ? '' : sprintf(
 				/* translators: 1: transferred size, 2: total size, e.g. "988.19 KB". */
-				__( '%1$s of %2$s', 'fena-media-manager' ), formatBytes( t.loaded ), formatBytes( t.size )
+				__( '%1$s of %2$s', 'migud-media-manager' ), formatBytes( t.loaded ), formatBytes( t.size )
 			) ).prop( 'hidden', null === t.percent || ! t.size );
 
-			label = collapsed ? __( 'Expand upload list', 'fena-media-manager' ) : __( 'Collapse upload list', 'fena-media-manager' );
-			panel.find( '.fmm-upload__toggle' ).prop( 'hidden', isDone ).attr( { 'aria-expanded': String( ! collapsed ), 'aria-label': label, title: label } ).empty().append( iconEl( collapsed ? 'fmm-i-chevron-up' : 'fmm-i-chevron-down' ) );
-			panel.find( '.fmm-upload__close' ).prop( 'hidden', ! isDone );
-			panel.find( '.fmm-upload__list' ).prop( 'hidden', collapsed && ! isDone );
+			label = collapsed ? __( 'Expand upload list', 'migud-media-manager' ) : __( 'Collapse upload list', 'migud-media-manager' );
+			panel.find( '.migud-mm-upload__toggle' ).prop( 'hidden', isDone ).attr( { 'aria-expanded': String( ! collapsed ), 'aria-label': label, title: label } ).empty().append( iconEl( collapsed ? 'migud-mm-i-chevron-up' : 'migud-mm-i-chevron-down' ) );
+			panel.find( '.migud-mm-upload__close' ).prop( 'hidden', ! isDone );
+			panel.find( '.migud-mm-upload__list' ).prop( 'hidden', collapsed && ! isDone );
 
 			_.each( entryList(), renderRow );
 
@@ -289,7 +289,7 @@
 		function inQueue( id ) {
 			return queue.some( function( model ) {
 				var file = model.get( 'file' );
-				return model.fmmId === id || ( file && file.id === id );
+				return model.migudMMId === id || ( file && file.id === id );
 			} );
 		}
 
@@ -297,13 +297,13 @@
 			var file = model.get( 'file' ) || {};
 			var id = file.id || model.cid;
 
-			model.fmmId = id;
+			model.migudMMId = id;
 			add( id, { name: model.get( 'filename' ) || file.name || '', size: model.get( 'size' ) || file.size || 0, type: file.type || '' } );
 			schedule();
 		} );
 
 		queue.on( 'change:percent change:loaded', function( model ) {
-			var entry = entries[ model.fmmId ];
+			var entry = entries[ model.migudMMId ];
 			var percent = model.get( 'percent' );
 
 			if ( ! entry || 'uploading' !== entry.state || ! model.get( 'uploading' ) ) {
@@ -322,7 +322,7 @@
 		} );
 
 		queue.on( 'change:uploading', function( model ) {
-			var entry = entries[ model.fmmId ];
+			var entry = entries[ model.migudMMId ];
 
 			if ( entry && ! model.get( 'uploading' ) && 'error' !== entry.state ) {
 				entry.state = 'done';
@@ -358,7 +358,7 @@
 			if ( 'error' === entry.state ) {
 				// Core's uploader status announces the error text itself; only the file name is spoken here.
 				/* translators: %s: file name. */
-				speak( sprintf( __( 'Upload failed: %s.', 'fena-media-manager' ), entry.name ), 'assertive' );
+				speak( sprintf( __( 'Upload failed: %s.', 'migud-media-manager' ), entry.name ), 'assertive' );
 			}
 			schedule();
 		} );

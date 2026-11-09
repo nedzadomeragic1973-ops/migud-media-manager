@@ -2,5 +2,5 @@
 /**
  * Silence is golden.
  *
- * @package Fena_Media_Manager
+ * @package MIGUD_Media_Manager
  */

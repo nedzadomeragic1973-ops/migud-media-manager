@@ -1,4 +1,4 @@
-=== Fena Media Manager ===
+=== MIGUD Media Manager ===
 Contributors: nedzadomeragic
 Donate link: https://www.paypal.me/nedzadomeragic
 Tags: media library, media folders, folders, organize media, media
@@ -13,13 +13,13 @@ Virtual folders for the WordPress media library. Organize media in folders and s
 
 == Description ==
 
-Fena Media Manager adds a folder sidebar to the native WordPress media library. Create folders and subfolders, drag media into them and find files faster – directly in Media > Library, in the list view and in the media modal.
+MIGUD Media Manager adds a folder sidebar to the native WordPress media library. Create folders and subfolders, drag media into them and find files faster – directly in Media > Library, in the list view and in the media modal.
 
 Folders are virtual. They are stored as a private WordPress taxonomy, so **files are never moved or renamed on the server**. File paths, URLs, attachment IDs and metadata stay exactly as they are, and existing links and embedded images keep working. One file can be in several folders at the same time.
 
 The plugin uses no custom database tables, loads no external resources and needs no account. Deactivating or deleting it keeps all folders, assignments and settings in the database.
 
-= Why Fena Media Manager? =
+= Why MIGUD Media Manager? =
 
 * **Free, with every feature included.** No Pro version, no upgrade notices, no feature limits.
 * **Built on WordPress standards.** Folders are a regular private taxonomy – no custom database tables, no external requests, no build tools. Deactivating or deleting the plugin removes nothing.
@@ -97,7 +97,7 @@ Export your folder structure as a JSON file and import it on another site, for e
 
 = Settings =
 
-Media > Fena Media Manager (administrators only):
+Media > MIGUD Media Manager (administrators only):
 
 * Default sort order for users who have not chosen one.
 * Folder tree on load: collapsed or expanded.
@@ -114,14 +114,14 @@ Media > Fena Media Manager (administrators only):
 
 = Free and independent =
 
-Fena Media Manager is free, with all features included. It works with any theme and does not depend on other plugins. If you find it useful, you can support its development with a voluntary donation via PayPal; the link on the settings page is optional.
+MIGUD Media Manager is free, with all features included. It works with any theme and does not depend on other plugins. If you find it useful, you can support its development with a voluntary donation via PayPal; the link on the settings page is optional.
 
 == Installation ==
 
-1. In your WordPress admin, go to Plugins > Add New Plugin and search for "Fena Media Manager", or upload the plugin ZIP via Plugins > Add New Plugin > Upload Plugin.
+1. In your WordPress admin, go to Plugins > Add New Plugin and search for "MIGUD Media Manager", or upload the plugin ZIP via Plugins > Add New Plugin > Upload Plugin.
 2. Activate the plugin.
 3. Open Media > Library in the grid view and use the folder sidebar.
-4. Optional: adjust the defaults in Media > Fena Media Manager.
+4. Optional: adjust the defaults in Media > MIGUD Media Manager.
 
 == Frequently Asked Questions ==
 
@@ -149,6 +149,10 @@ No. The JSON export contains only the folder structure: names, hierarchy, manual
 
 Nothing is deleted. Folders, assignments and settings remain in the database and are available again after reactivation.
 
+= I used the plugin under its former name "Fena Media Manager". Do I keep my folders? =
+
+Yes. MIGUD Media Manager takes over the stored folders, assignments and settings; folder IDs and assignments stay the same. Deactivate Fena Media Manager, then activate MIGUD Media Manager. While both are active, MIGUD Media Manager stays inactive and shows an admin notice. Until the stored data has been updated to the new format, the folder features are paused and nothing is changed; an admin notice explains this. Folder structures exported with Fena Media Manager can still be imported.
+
 = Which uploads use the default upload folder? =
 
 Uploads started in the media library grid or in the media modal while "All Media" is selected. An open folder always takes precedence, and uploads started in "Unassigned" stay unassigned. Uploads via the separate upload page (Media > Add Media File, media-new.php), the REST API or code are not affected.
@@ -159,9 +163,9 @@ The "Media" tab of the block inserter does not support folders. The media modal,
 
 = Can the permissions or default folders be changed? =
 
-Yes, with the filters `fmm_manage_folders_capability` (default `edit_others_posts`) and `fmm_default_folders`.
+Yes, with the filters `migud_mm_manage_folders_capability` (default `edit_others_posts`) and `migud_mm_default_folders`. The former names `fmm_manage_folders_capability`, `fmm_default_folders` and `fmm_donate_url` still work for now but are deprecated; they run before the new filters.
 
-`fmm_manage_folders_capability` is security relevant: every user with the returned capability may create, rename, move and delete folders for the whole site. Return a capability that only trusted roles have, never `read` or `upload_files`. Assigning media is not affected; it always requires `upload_files` and permission to edit the media file.
+`migud_mm_manage_folders_capability` is security relevant: every user with the returned capability may create, rename, move and delete folders for the whole site. Return a capability that only trusted roles have, never `read` or `upload_files`. Assigning media is not affected; it always requires `upload_files` and permission to edit the media file.
 
 = Does the plugin contact external services? =
 
@@ -179,6 +183,7 @@ No. The plugin sends no data to external services. The optional donation button 
 == Credits ==
 
 Interface icons: Heroicons by Tailwind Labs, Inc. (https://heroicons.com), MIT License.
+Folder icons ("folder", "folder-open") and the settings page header graphic: own designs, GPLv2 or later.
 
 == Changelog ==
 
