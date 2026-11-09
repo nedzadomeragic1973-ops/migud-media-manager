@@ -1,5 +1,5 @@
 === Migud Media Manager ===
-Contributors: nedzadomeragic
+Contributors: Migud Studio
 Donate link: https://www.paypal.me/nedzadomeragic
 Tags: media library, media folders, folders, organize media, media
 Requires at least: 6.4
