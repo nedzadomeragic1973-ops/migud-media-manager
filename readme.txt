@@ -1,4 +1,4 @@
-=== Fena Media Manager ===
+=== Migud Media Manager ===
 Contributors: nedzadomeragic
 Donate link: https://www.paypal.me/nedzadomeragic
 Tags: media library, media folders, folders, organize media, media
@@ -13,13 +13,13 @@ Virtual folders for the WordPress media library. Organize media in folders and s
 
 == Description ==
 
-Fena Media Manager adds a folder sidebar to the native WordPress media library. Create folders and subfolders, drag media into them and find files faster – directly in Media > Library, in the list view and in the media modal.
+Migud Media Manager adds a folder sidebar to the native WordPress media library. Create folders and subfolders, drag media into them and find files faster – directly in Media > Library, in the list view and in the media modal.
 
 Folders are virtual. They are stored as a private WordPress taxonomy, so **files are never moved or renamed on the server**. File paths, URLs, attachment IDs and metadata stay exactly as they are, and existing links and embedded images keep working. One file can be in several folders at the same time.
 
 The plugin uses no custom database tables, loads no external resources and needs no account. Deactivating or deleting it keeps all folders, assignments and settings in the database.
 
-= Why Fena Media Manager? =
+= Why Migud Media Manager? =
 
 * **Free, with every feature included.** No Pro version, no upgrade notices, no feature limits.
 * **Built on WordPress standards.** Folders are a regular private taxonomy – no custom database tables, no external requests, no build tools. Deactivating or deleting the plugin removes nothing.
@@ -97,7 +97,7 @@ Export your folder structure as a JSON file and import it on another site, for e
 
 = Settings =
 
-Media > Fena Media Manager (administrators only):
+Media > Migud Media Manager (administrators only):
 
 * Default sort order for users who have not chosen one.
 * Folder tree on load: collapsed or expanded.
@@ -114,14 +114,14 @@ Media > Fena Media Manager (administrators only):
 
 = Free and independent =
 
-Fena Media Manager is free, with all features included. It works with any theme and does not depend on other plugins. If you find it useful, you can support its development with a voluntary donation via PayPal; the link on the settings page is optional.
+Migud Media Manager is free, with all features included. It works with any theme and does not depend on other plugins. If you find it useful, you can support its development with a voluntary donation via PayPal; the link on the settings page is optional.
 
 == Installation ==
 
-1. In your WordPress admin, go to Plugins > Add New Plugin and search for "Fena Media Manager", or upload the plugin ZIP via Plugins > Add New Plugin > Upload Plugin.
+1. In your WordPress admin, go to Plugins > Add New Plugin and search for "Migud Media Manager", or upload the plugin ZIP via Plugins > Add New Plugin > Upload Plugin.
 2. Activate the plugin.
 3. Open Media > Library in the grid view and use the folder sidebar.
-4. Optional: adjust the defaults in Media > Fena Media Manager.
+4. Optional: adjust the defaults in Media > Migud Media Manager.
 
 == Frequently Asked Questions ==
 
