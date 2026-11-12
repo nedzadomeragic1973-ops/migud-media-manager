@@ -151,6 +151,10 @@ class Migud_MM_Library {
 		self::register_picker();
 		wp_enqueue_style( 'migud-mm-components' );
 		wp_enqueue_style( 'migud-mm-media', MIGUD_MM_URL . 'assets/css/migud-mm-media.css', array( 'migud-mm-tokens', 'migud-mm-components' ), self::asset_version( 'assets/css/migud-mm-media.css' ) );
+		$button_css = Migud_MM_Settings::new_folder_button_css();
+		if ( '' !== $button_css ) {
+			wp_add_inline_style( 'migud-mm-media', $button_css );
+		}
 		wp_enqueue_script(
 			'migud-mm-folder-sidebar',
 			MIGUD_MM_URL . 'assets/js/migud-mm-folder-sidebar.js',

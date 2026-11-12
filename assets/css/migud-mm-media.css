@@ -88,13 +88,14 @@
 	height: 32px;
 	margin: 0;
 	padding: 0 12px;
-	color: var(--migud-mm-on-primary);
+	/* --migud-mm-new-folder*: setting "New Folder button color" (inline CSS, only when not the default) */
+	color: var(--migud-mm-on-new-folder, var(--migud-mm-on-primary));
 	font-size: 13px;
 	font-weight: 500;
 	line-height: 1;
 	white-space: nowrap;
-	background: var(--migud-mm-primary);
-	border: 1px solid var(--migud-mm-primary);
+	background: var(--migud-mm-new-folder, var(--migud-mm-primary));
+	border: 1px solid var(--migud-mm-new-folder-border, var(--migud-mm-new-folder, var(--migud-mm-primary)));
 	border-radius: var(--migud-mm-radius-control);
 	cursor: pointer;
 	transition: background-color var(--migud-mm-transition), border-color var(--migud-mm-transition);
@@ -102,8 +103,14 @@
 
 .migud-mm-sidebar__new:hover,
 .migud-mm-sidebar__new:active {
-	background: var(--migud-mm-primary-hover);
-	border-color: var(--migud-mm-primary-hover);
+	background: var(--migud-mm-new-folder-hover, var(--migud-mm-primary-hover));
+	border-color: var(--migud-mm-new-folder-border, var(--migud-mm-new-folder-hover, var(--migud-mm-primary-hover)));
+}
+
+.migud-mm-sidebar__new:disabled {
+	opacity: 0.5;
+	cursor: default;
+	pointer-events: none;
 }
 
 .migud-mm-sidebar__new:focus {

@@ -103,6 +103,7 @@ Media > MIGUD Media Manager (administrators only):
 * Folder tree on load: collapsed or expanded.
 * Restore the last opened folder (saved per user in the browser).
 * Default upload folder.
+* Color of the "New Folder" button; text and icon colors adjust automatically for contrast.
 * Import and export of the folder structure.
 
 = Roles and permissions =
@@ -151,7 +152,7 @@ Nothing is deleted. Folders, assignments and settings remain in the database and
 
 = I used the plugin under its former name "Fena Media Manager". Do I keep my folders? =
 
-Yes. MIGUD Media Manager takes over the stored folders, assignments and settings; folder IDs and assignments stay the same. Deactivate Fena Media Manager, then activate MIGUD Media Manager. While both are active, MIGUD Media Manager stays inactive and shows an admin notice. Until the stored data has been updated to the new format, the folder features are paused and nothing is changed; an admin notice explains this. Folder structures exported with Fena Media Manager can still be imported.
+Yes. MIGUD Media Manager takes over the stored folders, assignments and settings; folder IDs and assignments stay the same. Deactivate Fena Media Manager, then activate MIGUD Media Manager. While both are active, MIGUD Media Manager stays inactive and shows an admin notice. Until the stored data has been updated to the new format, the folder features are paused and nothing is changed; an admin notice explains this.
 
 = Which uploads use the default upload folder? =
 
@@ -199,7 +200,7 @@ Folder icons ("folder", "folder-open") and the settings page header graphic: own
 * Uploads into the open folder, optional default upload folder and an upload progress panel.
 * Keyboard shortcuts with a built-in help and a collapsible folder panel.
 * JSON import and export of the folder structure with validation and preview.
-* Settings page with default sort order, folder tree on load, restore last folder and default upload folder.
+* Settings page with default sort order, folder tree on load, restore last folder, default upload folder and New Folder button color.
 
 == Upgrade Notice ==
 

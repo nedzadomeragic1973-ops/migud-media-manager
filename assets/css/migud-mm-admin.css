@@ -190,6 +190,87 @@
 	max-width: 320px;
 }
 
+/* New Folder button color: same swatch as the custom color of the folder Appearance dialog */
+.migud-mm-settings .migud-mm-color {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"] {
+	flex: none;
+	box-sizing: border-box;
+	width: 28px;
+	height: 28px;
+	margin: 0;
+	padding: 0;
+	background: none;
+	border: 0;
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px var(--migud-mm-border);
+	cursor: pointer;
+	appearance: none;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"][hidden],
+.migud-mm-settings .migud-mm-color .button[hidden] {
+	display: none;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"]::-webkit-color-swatch {
+	border: 0;
+	border-radius: 50%;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"]::-moz-color-swatch {
+	border: 0;
+	border-radius: 50%;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"]:focus {
+	outline: 0;
+}
+
+.migud-mm-settings .migud-mm-color input[type="color"]:focus-visible {
+	outline: var(--migud-mm-focus-width) solid var(--migud-mm-focus);
+	outline-offset: 2px;
+}
+
+.migud-mm-settings .migud-mm-color input[type="text"] {
+	box-sizing: border-box;
+	width: 104px;
+	height: 34px;
+	min-height: 34px;
+	margin: 0;
+	padding: 0 10px;
+	color: var(--migud-mm-text);
+	font-size: 13px;
+	line-height: 1.4;
+	background-color: var(--migud-mm-surface);
+	border: 1px solid var(--migud-mm-border-input);
+	border-radius: var(--migud-mm-radius-control);
+	box-shadow: none;
+}
+
+.migud-mm-settings .migud-mm-color input[type="text"]:hover {
+	border-color: var(--migud-mm-text-muted);
+}
+
+.migud-mm-settings .migud-mm-color input[type="text"]:focus {
+	border-color: var(--migud-mm-accent);
+	outline: 2px solid transparent;
+	box-shadow: 0 0 0 1px var(--migud-mm-accent);
+}
+
+.migud-mm-settings .migud-mm-color input[type="text"]:invalid {
+	border-color: var(--migud-mm-danger);
+}
+
 .migud-mm-settings .migud-mm-field__warning {
 	margin: 8px 0 0;
 	padding: 8px 10px;
@@ -537,6 +618,11 @@
 		height: 40px;
 		min-height: 40px;
 		line-height: 38px;
+	}
+
+	.migud-mm-settings .migud-mm-color input[type="text"] {
+		height: 40px;
+		min-height: 40px;
 	}
 
 	.migud-mm-settings .migud-mm-transfer input[type="file"]::file-selector-button {

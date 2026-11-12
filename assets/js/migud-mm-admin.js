@@ -68,6 +68,57 @@
 	enhance( document.getElementById( 'migud-mm-default-sort' ) );
 	enhance( document.getElementById( 'migud-mm-upload-folder' ) );
 
+	// "New Folder button color": color input and hex field stay in sync; the hex field holds the value ('' = default).
+	function colorField( root ) {
+		var picker, hex, reset, status, fallback;
+
+		if ( ! root ) {
+			return;
+		}
+
+		picker = root.querySelector( '.migud-mm-color__picker' );
+		hex = root.querySelector( '.migud-mm-color__hex' );
+		reset = root.querySelector( '.migud-mm-color__reset' );
+		status = root.parentNode.querySelector( '.migud-mm-color__status' );
+		fallback = root.getAttribute( 'data-migud-mm-default' );
+
+		function hexFrom( raw ) {
+			var value = raw.trim().toLowerCase();
+
+			value = '#' === value.charAt( 0 ) ? value : '#' + value;
+			return /^#[0-9a-f]{6}$/.test( value ) ? value : '';
+		}
+
+		function fromPicker() {
+			hex.value = String( picker.value ).toLowerCase();
+			status.textContent = '';
+		}
+
+		picker.hidden = false;
+		reset.hidden = false;
+		picker.addEventListener( 'input', fromPicker );
+		picker.addEventListener( 'change', fromPicker );
+		hex.addEventListener( 'input', function() {
+			var value = hexFrom( hex.value );
+
+			if ( value || '' === hex.value.trim() ) {
+				picker.value = value || fallback;
+			}
+			status.textContent = '';
+		} );
+		reset.addEventListener( 'click', function() {
+			hex.value = '';
+			picker.value = fallback;
+			// Re-set so the same message is announced again.
+			status.textContent = '';
+			window.setTimeout( function() {
+				status.textContent = status.getAttribute( 'data-migud-mm-message' );
+			}, 100 );
+		} );
+	}
+
+	colorField( document.querySelector( '.migud-mm-settings .migud-mm-color' ) );
+
 	// Success notices get the same card as the folder sidebar (see migud-mm-components.css).
 	function svgIcon( id ) {
 		var ns = 'http://www.w3.org/2000/svg';

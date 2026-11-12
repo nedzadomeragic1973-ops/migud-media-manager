@@ -23,6 +23,16 @@ class Migud_MM_Settings {
 	const PAGE = 'migud-mm-settings';
 
 	/**
+	 * Default color of the "New Folder" button (--migud-mm-primary in migud-mm-tokens.css).
+	 */
+	const DEFAULT_BUTTON_COLOR = '#1e293b';
+
+	/**
+	 * Minimum contrast ratio of the button text and icon (WCAG AA, normal text).
+	 */
+	const MIN_CONTRAST = 4.5;
+
+	/**
 	 * Hook suffix of the settings page.
 	 *
 	 * @var string
@@ -47,10 +57,11 @@ class Migud_MM_Settings {
 	 */
 	public static function defaults() {
 		return array(
-			'default_sort'        => 'name_asc',
-			'tree_expanded'       => false,
-			'restore_last_folder' => false,
-			'upload_folder'       => 0,
+			'default_sort'            => 'name_asc',
+			'tree_expanded'           => false,
+			'restore_last_folder'     => false,
+			'upload_folder'           => 0,
+			'new_folder_button_color' => '',
 		);
 	}
 
@@ -84,6 +95,13 @@ class Migud_MM_Settings {
 		if ( $result['invalid_folder'] && ! in_array( 'migud_mm_invalid_upload_folder', wp_list_pluck( get_settings_errors( self::OPTION ), 'code' ), true ) ) {
 			add_settings_error( self::OPTION, 'migud_mm_invalid_upload_folder', __( 'The selected upload folder does not exist.', 'migud-media-manager' ) );
 		}
+		// An invalid color keeps the saved one.
+		if ( $result['invalid_color'] ) {
+			$result['values']['new_folder_button_color'] = $previous['values']['new_folder_button_color'];
+			if ( ! in_array( 'migud_mm_invalid_button_color', wp_list_pluck( get_settings_errors( self::OPTION ), 'code' ), true ) ) {
+				add_settings_error( self::OPTION, 'migud_mm_invalid_button_color', __( 'The New Folder button color must be a hex value such as #1e293b. The previous color was kept.', 'migud-media-manager' ) );
+			}
+		}
 
 		return $result['values'];
 	}
@@ -93,12 +111,13 @@ class Migud_MM_Settings {
 	 *
 	 * @param mixed $input    Raw settings.
 	 * @param array $defaults Defaults.
-	 * @return array { values: array, invalid_folder: bool }
+	 * @return array { values: array, invalid_folder: bool, invalid_color: bool }
 	 */
 	private static function normalize( $input, $defaults ) {
 		$input   = is_array( $input ) ? $input : array();
 		$values  = $defaults;
 		$invalid = false;
+		$color   = isset( $input['new_folder_button_color'] ) && is_string( $input['new_folder_button_color'] ) ? self::hex_color( $input['new_folder_button_color'] ) : '';
 
 		if ( isset( $input['default_sort'] ) && is_string( $input['default_sort'] ) && in_array( $input['default_sort'], Migud_MM_Taxonomy::SORT_MODES, true ) ) {
 			$values['default_sort'] = $input['default_sort'];
@@ -114,10 +133,134 @@ class Migud_MM_Settings {
 			$invalid = true;
 		}
 
+		// The default color is stored as '' so the button keeps the stylesheet colors.
+		if ( null !== $color && self::DEFAULT_BUTTON_COLOR !== $color ) {
+			$values['new_folder_button_color'] = $color;
+		}
+
 		return array(
 			'values'         => $values,
 			'invalid_folder' => $invalid,
+			'invalid_color'  => null === $color,
 		);
+	}
+
+	/**
+	 * Normalizes a #rrggbb color (case and the leading # are optional).
+	 *
+	 * @param string $raw Raw value.
+	 * @return string|null Lowercase #rrggbb, '' for empty, null when invalid.
+	 */
+	private static function hex_color( $raw ) {
+		$value = strtolower( trim( $raw ) );
+
+		if ( '' === $value ) {
+			return '';
+		}
+		$value = '#' === $value[0] ? $value : '#' . $value;
+
+		return 1 === preg_match( '/^#[0-9a-f]{6}$/', $value ) ? $value : null;
+	}
+
+	/**
+	 * Relative luminance of a #rrggbb color (WCAG 2).
+	 *
+	 * @param string $hex Lowercase #rrggbb.
+	 * @return float
+	 */
+	private static function luminance( $hex ) {
+		$channels = array_map(
+			static function ( $pair ) {
+				$value = hexdec( $pair ) / 255;
+				return $value <= 0.03928 ? $value / 12.92 : pow( ( $value + 0.055 ) / 1.055, 2.4 );
+			},
+			str_split( substr( $hex, 1 ), 2 )
+		);
+
+		return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+	}
+
+	/**
+	 * Contrast ratio of two #rrggbb colors (WCAG 2).
+	 *
+	 * @param string $a Lowercase #rrggbb.
+	 * @param string $b Lowercase #rrggbb.
+	 * @return float 1 to 21.
+	 */
+	private static function contrast( $a, $b ) {
+		$la = self::luminance( $a );
+		$lb = self::luminance( $b );
+
+		return ( max( $la, $lb ) + 0.05 ) / ( min( $la, $lb ) + 0.05 );
+	}
+
+	/**
+	 * Mixes two #rrggbb colors.
+	 *
+	 * @param string $from   Lowercase #rrggbb.
+	 * @param string $to     Lowercase #rrggbb.
+	 * @param float  $amount Share of $to (0 to 1).
+	 * @return string Lowercase #rrggbb.
+	 */
+	private static function mix( $from, $to, $amount ) {
+		$a   = str_split( substr( $from, 1 ), 2 );
+		$b   = str_split( substr( $to, 1 ), 2 );
+		$out = '#';
+		foreach ( array( 0, 1, 2 ) as $i ) {
+			$out .= sprintf( '%02x', (int) round( hexdec( $a[ $i ] ) + ( hexdec( $b[ $i ] ) - hexdec( $a[ $i ] ) ) * $amount ) );
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Text and icon color for a button background, from its measured contrast:
+	 * white whenever it reaches MIN_CONTRAST, otherwise the design's dark text,
+	 * otherwise black (always at least 4.58:1 where white falls short).
+	 *
+	 * @param string $background Lowercase #rrggbb.
+	 * @return string Lowercase #rrggbb.
+	 */
+	private static function readable_text( $background ) {
+		foreach ( array( '#ffffff', '#0f172a' ) as $text ) {
+			if ( self::contrast( $background, $text ) >= self::MIN_CONTRAST ) {
+				return $text;
+			}
+		}
+
+		return '#000000';
+	}
+
+	/**
+	 * Inline CSS custom properties for the "New Folder" button of the folder
+	 * sidebar; '' for the default color (the stylesheet values apply). Like
+	 * the default (#1e293b -> #334155), hover moves the background slightly
+	 * towards the text color, or away from it when the text contrast would
+	 * drop below MIN_CONTRAST. Very light colors get the form field border so
+	 * the button stays visible on the white sidebar.
+	 *
+	 * @return string CSS built from validated hex values only.
+	 */
+	public static function new_folder_button_css() {
+		$color = (string) self::get( 'new_folder_button_color' );
+
+		if ( '' === $color ) {
+			return '';
+		}
+
+		$text  = self::readable_text( $color );
+		$floor = min( self::MIN_CONTRAST, self::contrast( $color, $text ) );
+		$hover = self::mix( $color, $text, 0.12 );
+		if ( self::contrast( $hover, $text ) < $floor ) {
+			$hover = self::mix( $color, '#ffffff' === $text ? '#000000' : '#ffffff', 0.12 );
+		}
+
+		$css = '--migud-mm-new-folder:' . $color . ';--migud-mm-new-folder-hover:' . $hover . ';--migud-mm-on-new-folder:' . $text . ';';
+		if ( self::contrast( $color, '#ffffff' ) < 3 ) {
+			$css .= '--migud-mm-new-folder-border:#8392a8;';
+		}
+
+		return '.migud-mm-sidebar{' . $css . '}';
 	}
 
 	/**
@@ -293,7 +436,7 @@ class Migud_MM_Settings {
 	private static function render_header() {
 		?>
 			<div class="migud-mm-card migud-mm-hero">
-				<img class="migud-mm-hero__image" src="<?php echo esc_url( add_query_arg( 'ver', Migud_MM_Library::asset_version( 'assets/img/migud-mm-folder-header.svg' ), MIGUD_MM_URL . 'assets/img/migud-mm-folder-header.svg' ) ); ?>" width="42" height="28" alt="" decoding="async">
+				<img class="migud-mm-hero__image" src="<?php echo esc_url( add_query_arg( 'ver', Migud_MM_Library::asset_version( 'assets/img/migud-mm-folder-header.png' ), MIGUD_MM_URL . 'assets/img/migud-mm-folder-header.png' ) ); ?>" width="42" height="42" alt="" decoding="async">
 				<h1 class="migud-mm-hero__title"><?php esc_html_e( 'MIGUD Media Manager', 'migud-media-manager' ); ?></h1>
 			</div>
 			<?php // Core moves admin notices below this marker instead of into the header card. ?>
@@ -324,6 +467,7 @@ class Migud_MM_Settings {
 		$expanded  = (bool) self::get( 'tree_expanded' );
 		$restore   = (bool) self::get( 'restore_last_folder' );
 		$upload_to = (int) self::get( 'upload_folder' );
+		$button    = (string) self::get( 'new_folder_button_color' );
 		$name      = self::OPTION;
 		?>
 		<div class="wrap migud-mm migud-mm-settings">
@@ -386,6 +530,23 @@ class Migud_MM_Settings {
 								<?php endforeach; ?>
 							</select>
 							<p class="migud-mm-field__help" id="migud-mm-upload-folder-help"><?php esc_html_e( 'Uploads in the media library or media modal go into this folder when “All Media” is selected. A selected folder always takes precedence; uploads in “Unassigned” stay unassigned.', 'migud-media-manager' ); ?></p>
+						</div>
+					</div>
+
+					<div class="migud-mm-field">
+						<div class="migud-mm-field__label">
+							<label for="migud-mm-new-folder-color"><?php esc_html_e( 'New Folder button color', 'migud-media-manager' ); ?></label>
+						</div>
+						<div class="migud-mm-field__control">
+							<?php // Without JavaScript only the hex field is shown; empty = default color. ?>
+							<div class="migud-mm-color" data-migud-mm-default="<?php echo esc_attr( self::DEFAULT_BUTTON_COLOR ); ?>">
+								<label class="screen-reader-text" for="migud-mm-new-folder-color-picker"><?php esc_html_e( 'Choose the New Folder button color', 'migud-media-manager' ); ?></label>
+								<input type="color" id="migud-mm-new-folder-color-picker" class="migud-mm-color__picker" value="<?php echo esc_attr( '' !== $button ? $button : self::DEFAULT_BUTTON_COLOR ); ?>" hidden />
+								<input type="text" id="migud-mm-new-folder-color" class="migud-mm-color__hex" name="<?php echo esc_attr( $name ); ?>[new_folder_button_color]" value="<?php echo esc_attr( $button ); ?>" placeholder="<?php echo esc_attr( self::DEFAULT_BUTTON_COLOR ); ?>" maxlength="7" pattern="#?[0-9A-Fa-f]{6}" title="<?php esc_attr_e( 'Hex value such as #1e293b', 'migud-media-manager' ); ?>" spellcheck="false" autocomplete="off" aria-describedby="migud-mm-new-folder-color-help" />
+								<button type="button" class="button migud-mm-color__reset" hidden><?php esc_html_e( 'Reset to default', 'migud-media-manager' ); ?></button>
+							</div>
+							<p class="migud-mm-field__help" id="migud-mm-new-folder-color-help"><?php esc_html_e( 'Leave empty for the default color. Text and icon colors adjust automatically for good contrast. Folder colors are not affected.', 'migud-media-manager' ); ?></p>
+							<span class="screen-reader-text migud-mm-color__status" aria-live="polite" data-migud-mm-message="<?php esc_attr_e( 'Default color restored. Save the changes to apply it.', 'migud-media-manager' ); ?>"></span>
 						</div>
 					</div>
 

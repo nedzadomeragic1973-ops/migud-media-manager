@@ -20,12 +20,6 @@ class Migud_MM_Transfer {
 	const FORMAT = 'migud-media-manager/folders';
 
 	/**
-	 * Format identifiers of earlier plugin names that are still accepted on import
-	 * (same structure, version 1): files exported by "Fena Media Manager".
-	 */
-	const LEGACY_FORMATS = array( 'fena-media-manager/folders' );
-
-	/**
 	 * File format version.
 	 */
 	const VERSION = 1;
@@ -319,7 +313,7 @@ class Migud_MM_Transfer {
 			}
 		}
 
-		if ( ! isset( $data->format ) || ! in_array( $data->format, array_merge( array( self::FORMAT ), self::LEGACY_FORMATS ), true ) ) {
+		if ( ! isset( $data->format ) || self::FORMAT !== $data->format ) {
 			/* translators: %s: format identifier. */
 			self::add_error( $state, 'format', sprintf( __( 'Must be “%s”.', 'migud-media-manager' ), self::FORMAT ) );
 		}

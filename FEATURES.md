@@ -191,6 +191,12 @@ Media → MIGUD Media Manager (administrators):
 - Folder tree on load: collapsed or expanded.
 - Restore last folder.
 - Default upload folder.
+- New Folder button color: color picker and hex field (`#rrggbb`), empty =
+  default color (`#1e293b`), **Reset to default** button. Text and icon color
+  are chosen automatically from the measured contrast (white whenever it
+  reaches 4.5:1, otherwise dark); hover stays at least 4.5:1 and very light
+  colors get a visible border. Folder colors are not affected. Stored as
+  `new_folder_button_color` in `migud_mm_settings`.
 - Import / Export.
 - Optional donation link (PayPal.Me, opens in a new tab). The plugin works
   fully without it.
