@@ -42,8 +42,9 @@ release notes belong in `readme.txt`, task notes in the commit message.
   stable or provide a documented adapter.
 - Nothing may write plugin data while `Migud_MM_Maintenance::is_active()`; new write paths
   must respect it.
-- Exported folder files of the former name (`fena-media-manager/folders`) stay importable
-  (`Migud_MM_Transfer::LEGACY_FORMATS`).
+- Folder import and export use `Migud_MM_Transfer::FORMAT` (`migud-media-manager/folders`)
+  and `Migud_MM_Transfer::VERSION` (1). The importer rejects files with the former
+  `fena-media-manager/folders` identifier.
 - Deactivation and uninstall delete nothing.
 - Warn before any change to stored-data meaning; recommend a database backup first.
 - Git rollback does not roll back the database.
@@ -61,8 +62,16 @@ release notes belong in `readme.txt`, task notes in the commit message.
   `Stable tag` in `readme.txt`; add a changelog entry.
 - Production asset cache busting relies on `MIGUD_MM_VERSION`; local/development environments
   append the file modification time automatically.
-- Release ZIP: `git archive --prefix=migud-media-manager/ -o migud-media-manager-<version>.zip v<version>`
-  (`.gitattributes` excludes development files).
+- The proposed convention for future Git release tags is `migud-vX.Y.Z`. WordPress.org
+  uses the numeric version `X.Y.Z` for both `Stable tag` and the SVN directory under `tags/`.
+- From the repository root, set `version=X.Y.Z` to the release version and build the ZIP
+  from the approved Git tag. `.gitattributes` excludes development files.
+
+  ```sh
+  git archive --format=zip --prefix=migud-media-manager/ \
+    -o "../migud-media-manager-${version}.zip" "migud-v${version}"
+  unzip -Z1 "../migud-media-manager-${version}.zip"
+  ```
 
 ## Coding standards and verification
 
