@@ -174,12 +174,12 @@ No. The plugin sends no data to external services. The optional donation button 
 
 == Screenshots ==
 
-1. Folder sidebar next to the media library grid.
-2. Folder menu with rename, move, appearance and lock actions.
-3. Appearance dialog with folder colors and icons.
-4. Upload progress panel.
-5. Keyboard shortcuts help.
-6. Settings page with import and export of the folder structure.
+1. The media library grid with the folder sidebar and upload area.
+2. The folder Appearance dialog with preset colors, icons, and a live preview.
+3. The custom color picker with a hex field and a live folder preview.
+4. The folder menu with actions to rename, move, style, lock, or delete a folder.
+5. Editing a folder name directly in the sidebar.
+6. The settings page with folder defaults, the New Folder button color, and JSON import and export.
 
 == Credits ==
 
